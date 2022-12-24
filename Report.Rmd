@@ -1,0 +1,3255 @@
+---
+title: 'Structural evolution of an amphibian-specific globin: a computational evolutionary biochemistry approach'
+author:
+- João Pedro Fernandes Queiroz^[Universidade Federal do Ceará, pedroqueiroz@alu.ufc.br]
+- Bruno Anderson Matias da Rocha^[Universidade Federal do Ceará,
+  brunoanderson@gmail.com]
+- Marcos Roberto Lourenzoni^[Instituto Oswaldo Cruz - Ceará]
+date: "05/06/2022"
+output:
+  pdf_document:
+    number_sections: yes
+header-includes:
+  - \usepackage{texshade}
+  - \newcommand{\beginsupplement}{
+    \setcounter{table}{0}
+    \renewcommand{\thetable}{S\arabic{table}}
+    \setcounter{figure}{0}
+    \renewcommand{\thefigure}{S\arabic{figure}}
+    }
+bibliography: Bibliography.bib
+csl: elsevier-harvard.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\beginsupplement
+
+# Introduction
+
+Previously, we have characterized a new globin gene type that originated in amphibians [@Queiroz2021]. Specifically, this globin gene arose in the lineage of Neobatrachia and Pelobatoidea anurans. We named it as *globin A* (_GbA_). The protein was characterized as a monomeric hemoglobin in the heart of the bullfrog (_Rana catesbeiana_) [@Maeda1982a]. Our phylogenetic analysis suggested that it evolved through co-option of an $\alpha^E$-globin chain after a transposition event to the same chromosome where we found _androglobin_ (_Adgb_). Because it is a monomeric globin, we inferred that the neofunctionalization process that gave rise to GbA involved the loss of subunit contact residues that permit $\alpha$-chains of hemoglobin (Hb) to form homodimers, a character already present in the ancestor of the $\alpha$ and $\beta$ hemoglobin (Hb) chains [@Pillai2020]. Here, we will investigate the historical and physical causes of the monomeric architecture in GbA through a computational evolutionary biochemistry approach, where the resurrection of the GbA ancestors will be made with structural bioinformatics tools. Beyond the evolutionary mechanisms responsible for the origin and maintenance of molecular complexes, we hope that analyses of the net surface charges of GbA will allows us to infer evolutionary trends in this proteins that could be interesting for studies of biochemical and physiological adaptations in anurans. Also, we will investigate the _GbA_ locus through comparative genomics.  
+
+```{r methodology_flow_chart, eval=FALSE, include=FALSE, message=FALSE, warning=FALSE, fig.cap="General workflow of our computational evolutionary biochemistry analysis."}
+
+library(DiagrammeR)
+grViz("
+digraph methodology {
+
+  # a 'graph' statement
+  graph [overlap = true, fontsize = 10]
+
+  # several 'node' statements
+  node [shape = box,
+        fontname = Helvetica,
+        fontcolor = black,
+        color = grey,
+        penwidth = 5]
+  'Gene dataset'; 'Taxonomic sampling';
+  'Obtaining species tree from literature';
+
+  node [shape = box,
+        fontname = Helvetica,
+        fontcolor = black,
+        color = gold3,
+        penwidth = 5]
+  'Structural bioinformatics';'Computational molecular evolution';
+
+  node [shape = box,
+        fontname = Helvetica,
+        fontcolor = black,
+        color = plum,
+        penwidth = 5]
+  'Gene synteny analysis'; 'Gene structure analysis'; 
+  'Multiple sequence alignment'; 'Phylogeny reconstruction';
+  'Ancestral sequence reconstruction'; 'Molecular evolution analyses'; 
+  'Protein 3D structure prediction'; 'Protein-protein docking'; 
+  'Binding energy calculation'; 'Net surface charge calculation';
+
+  node [shape = box,
+        fontname = Helvetica,
+        fontcolor = black,
+        color = orange,
+        penwidth = 5]
+  'Speciation and duplication inference';
+  'Intron positions and conservation';
+  'Selection signatures'; 'Site-specific rate variation';
+
+  node [shape = box,
+        fontname = Helvetica,
+        fontcolor = black,
+        color = DarkSlateGray,
+        penwidth = 5]
+  'Deduced proteins';
+  'Nucleotide alignment'; 'Amino acid alignment'; 'Codon alignment';
+  'Gene tree';
+  'Monomers'; 'Putative homodimers';
+
+
+  node [shape = box,
+        fontname = Helvetica,
+        fontcolor = black,
+        color = DarkSeaGreen,
+        penwidth = 5]
+  'Phylogenetic comparative analysis';
+  'Structural analysis';  
+
+  node [shape = box,
+        fontname = Helvetica,
+        fontcolor = black,
+        color = DeepSkyBlue,
+        penwidth = 5]
+  'Physical causes of the loss of oligomerization';
+  'Evolutionary trends';
+  
+  # several 'edge' statements
+  edge [color = black]
+  'Taxonomic sampling'->'Gene dataset'
+  'Taxonomic sampling'->'Obtaining species tree from literature'
+  'Gene dataset'->'Deduced proteins'
+  'Gene dataset'->'Computational molecular evolution'
+  'Deduced proteins'->'Structural bioinformatics' 
+  'Gene dataset'->'Gene structure analysis'
+  'Gene dataset'->'Gene synteny analysis'
+  'Gene structure analysis'->'Intron positions and conservation'
+  'Computational molecular evolution'->'Multiple sequence alignment'
+  'Structural bioinformatics'->'Protein 3D structure prediction'
+  'Ancestral sequence reconstruction'->'Protein 3D structure prediction'
+  'Multiple sequence alignment'->'Nucleotide alignment'
+  'Multiple sequence alignment'->'Amino acid alignment'
+  'Multiple sequence alignment'->'Codon alignment'
+  'Nucleotide alignment'->'Phylogeny reconstruction' 
+  'Phylogeny reconstruction'->'Gene tree'
+  'Gene tree'->'Speciation and duplication inference'
+  'Gene tree'->'Ancestral sequence reconstruction'
+  'Gene tree'->'Molecular evolution analyses'
+  'Nucleotide alignment'->'Ancestral sequence reconstruction'
+  'Amino acid alignment'->'Ancestral sequence reconstruction'
+  'Codon alignment'->'Ancestral sequence reconstruction'
+  'Codon alignment'->'Molecular evolution analyses'
+  'Molecular evolution analyses'->'Selection signatures'
+  'Molecular evolution analyses'->'Site-specific rate variation'
+  'Binding energy calculation'->'Structural analysis'
+  'Site-specific rate variation'->'Structural analysis'
+  'Protein 3D structure prediction'->'Monomers'
+  'Monomers'->'Protein-protein docking'
+  'Monomers'->'Net surface charge calculation'
+  'Net surface charge calculation'->'Phylogenetic comparative analysis'
+  'Protein-protein docking'->'Putative homodimers'
+  'Putative homodimers'->'Binding energy calculation'
+  'Binding energy calculation'->'Phylogenetic comparative analysis'
+  'Gene synteny analysis'->'Speciation and duplication inference'
+  'Obtaining species tree from literature'->'Speciation and duplication inference'
+  'Structural analysis'->'Physical causes of the loss of oligomerization'
+  'Phylogenetic comparative analysis'->'Evolutionary trends'
+}
+")
+
+```
+
+# Globin genes data set
+
+Since our previous work [@Queiroz2021], new genomes and transcriptomes of amphibians were published. However, for this study, we will add to our curated data set only the _GbA_ genes from the common toad (_Bufo bufo_) RefSeq genome (aBufBuf1.1), in which the _GbA_ genes were annotated and may be inspected through the browser _Genome Data Viewer_ from NCBI [@Agarwala2018].  
+
+```{r data_set, include=FALSE}
+
+setwd("D:/Biblioteca/Research_projects/Globin_A")
+library(Biostrings)
+gba.dna <- readDNAStringSet("GbA_dna.fasta")
+excluded.gba <- readDNAStringSet("GbA_dna_excluded_from_final_analysis.fasta")
+
+```
+
+Our globin data set comprises `r length(gba.dna)` coding sequences, from which 11 are $\alpha^E$-globins from representative amphibians and 32 are _GbA_. This data set was obtained from a bigger data set where we excluded sequences that were highly similar. Also, we excluded _Lle_HbGbA2_ and _Pre_GbA_ because these sequences are too divergent and we are not sure whether they are correctly annotated, or correctly sequenced, or even whether they are functional globin sequences. `r length(excluded.gba)` sequences were excluded in total. Nevertheless, we maintained many _GbA_ sequences from _B. bufo_ to appreciate the expansion of _GbA_ paralogs in the Bufonidae family.  
+
+__A note on species abbreviations in gene labels:__ We used 3 letters to abbreviate the species names. _Microcaecilia unicolor_ (Mun), _Ambystoma mexicanum_ (Ame), _Xenopus tropicalis_ (Xtr), _Rana catesbeiana_ (Rca), _Rhinella marina_ (Rma), _Nanorana parkeri_ (Npa), _Oophaga pumilio_ (Opu), _Rhinella arenarum_ (Rar), _Bufo bufo_ (Bbu), _Leptobrachium leishanense_ (Lle), _Microhyla fissipes_ (Mpi), _Pyxicephalus adspersus_ (Pad), _Odorrana tormota_ (Oto), _Rana temporaria_ (Rte), _Rana pipiens_ (Rpi), and _Pseudacris regilla_ (Pre).  
+
+# Multiple sequence alignment
+
+We used the following software for multiple sequence alignment (MSA) of the coding sequences: MAFFT models E-INS-i, FFT-NS-i, G-INS-i, and L-INS-i (http://mafft.cbrc.jp/alignment/software/index.html) [@Katoh2002; @Katoh2005; @Katoh2008]; ClustalW and Clustal Omega [@Chenna2003; @Larkin2007; @Sievers2011]; MUSCLE [@Edgar2004]; and T-Coffee [@Notredame2000]. We ran each alignment software as external applications on R language (version 4.1.1) [@R] using the respective functions of the packages _ape_ (version 5.5) [@Paradis2019] and _ips_ (version 0.0.11) [@ips], as we can see in the script bellow.  
+
+```{r msa, eval=FALSE, include=TRUE}
+
+# MSA of the GbA coding sequences dataset
+#
+# Loading the sequence file
+x <- read.dna("GbA_dna.fasta", format = "fasta")
+x
+#
+# Directory where to find the alignment software executable
+setwd("D:/Biblioteca/R scripts/Multiple Sequence Alignment")
+#
+# Running model L-INS-i from MAFFT
+msa1 <- mafft(x, method = "localpair", maxiterate = 1000, op = 1.53, ep = 0,
+      thread = -1, exec = "mafft-7.475-win64-signed/mafft-win/mafft.bat",
+      quiet = TRUE)
+#
+# Running model G-INS-i from MAFFT
+msa2 <- mafft(x, method = "globalpair", maxiterate = 1000, op = 1.53, ep = 0,
+      thread = -1, exec = "mafft-7.475-win64-signed/mafft-win/mafft.bat",
+      quiet = TRUE)
+#
+# Running model E-INS-i from MAFFT
+msa3 <- mafft(x, method = "genafpair", maxiterate = 1000, op = 1.53, ep = 0,
+      thread =  -1,exec = "mafft-7.475-win64-signed/mafft-win/mafft.bat",
+      quiet = TRUE)
+#
+# Running model FFT-NS-i from MAFFT
+msa4 <- mafft(x, method = "retree 2", maxiterate = 1000, op = 1.53, ep = 0,
+      thread = -1, exec = "mafft-7.475-win64-signed/mafft-win/mafft.bat",
+      quiet = TRUE)
+#
+# Running ClustalW
+msa5 <- clustal(x, pw.gapopen = 15, pw.gapext = 6.66, gapopen = 15,
+                gapext = 6.66, exec = "clustalw2.exe", MoreArgs = "",
+        quiet = TRUE, original.ordering = TRUE)
+#
+# Running Clustal Omega
+msa6 <- clustalomega(x, exec = "clustal-omega-1.2.2-win64/clustalo.exe",
+             MoreArgs = "", quiet = TRUE, original.ordering = TRUE)
+#
+# Running MUSCLE
+msa7 <- muscle(x, exec = "muscle3.8.31_i86win32.exe", MoreArgs = "",
+               quiet = TRUE, original.ordering = TRUE)
+#
+# Running T-Coffee
+msa8 <- tcoffee(x, exec = "wsl.exe t_coffee", MoreArgs = "", quiet = TRUE, 
+                original.ordering = TRUE)
+#
+# Writing the msa objects, but change the working directory first
+setwd("D:/Biblioteca/Research_projects/Globin_A")
+write.FASTA(msa1, file = "MAFFT_L-INS-i_MSA_GbA_dna.fasta")
+write.FASTA(msa2, file = "MAFFT_G-INS-i_MSA_GbA_dna.fasta")
+write.FASTA(msa3, file = "MAFFT_E-INS-i_MSA_GbA_dna.fasta")
+write.FASTA(msa4, file = "MAFFT_FFT-NS-i_MSA_GbA_dna.fasta")
+write.FASTA(msa5, file = "ClustalW_MSA_GbA_dna.fasta")
+write.FASTA(msa6, file = "ClustalOmega_MSA_GbA_dna.fasta")
+write.FASTA(msa7, file = "MUSCLE_MSA_GbA_dna.fasta")
+write.FASTA(msa8, file = "T-Coffee_MSA_GbA_dna.fasta")
+
+```
+
+We ranked MSA using MUMSA software [@Lassmann2005] through the web server (https://msa.sbc.su.se/cgi-bin/msa.cgi) [@Lassmann2006]. A cutoff of 0.8 for the multiple overlap score (MOS) is often used for trusting the quality of a MSA [@Lassmann2005].  
+
+![MUMSA scores for eitht MSA.](MSA/MUMSA_MSA_GbA_dna_26-07-2021.jpg)  
+
+\newpage
+
+We also used webPRANK (https://www.ebi.ac.uk/goldman-srv/webprank/) [@Loytynoja2010] and MACSE software (version 0.9b1) [@Ranwez2011] for MSA and we ranked them with MUMSA again. As we can see below, the average overlap score (AOS) increased by adding both MSA.
+
+![MUMSA scores for ten MSA.](MSA/MUMSA_10MSA_GbA_dna_26-07-2021.jpg)  
+
+\newpage
+
+The model E-INS-i from MAFFT had the best score in the MUMSA comparison without MACSE and PRANK, but it was the second best in the comparison including MACSE and PRANK MSA, where MAFFT L-INS-i and G-INS-i had the best score. So, we decided to compare them using the check alignment function from _ape_ package.
+
+__MAFFT E-INS-i dna alignment__
+
+```{r check_msa_01, echo=TRUE, message=FALSE, warning=FALSE, fig.height=16, fig.width=14, fig.cap="MSA from MAFFT E-INS-i using the dataset with 43 globin sequences."}
+
+# Checking MSA
+library(ape)
+msa3 <- readDNAMultipleAlignment("MAFFT_E-INS-i_MSA_GbA_dna.fasta", format = "fasta")
+checkAlignment(as.DNAbin(msa3), check.gaps = TRUE, plot = TRUE, what = 1:4)
+
+```
+
+\newpage
+
+__MAFFT L-INS-i dna alignment__
+
+```{r check_msa_02, echo=TRUE, message=FALSE, warning=FALSE, fig.height=16, fig.width=14, fig.cap="MSA from MAFFT L-INS-i using the dataset with 43 globin sequences."}
+
+# Checking MSA
+library(ape)
+msa1 <- readDNAMultipleAlignment("MAFFT_L-INS-i_MSA_GbA_dna.fasta", format = "fasta")
+checkAlignment(as.DNAbin(msa1), check.gaps = TRUE, plot = TRUE, what = 1:4)
+
+```
+
+\newpage
+
+The alignments are similar, but the model E-INS-i presents less segment lengths not multiple of 3 than L-INS-i alignment. Also, a two nucleotide segment at the end of GbA sequences in the L-INS-i alignment is likely an error. Thus, we chose the E-INS-i alignment for phylogeny reconstruction. The MSA was also converted to phylip format for further analyses.
+
+```{r phylip_format, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Writing the msa objects in the PHYLIP format
+write.phylip(msa3, "MAFFT_E-INS-i_MSA_GbA_dna.phylip")
+
+```
+
+Despite all gaps are multiple of 3 in the MAFFT E-INS-i alignment, some segments have lengths not multiple of 3, mainly because MAFFT does not conserve the codon structure of the sequences. We did not edit the MSA manually when using it for phylogeny reconstruction.
+
+## Multiple sequence alignment for molecular evolution analysis
+
+Because the MSA of the MAFFT E-INS-i model does not conserve the codon structure, we used MACSE software [@Ranwez2011] to perform an alignment that conserves the codon structure.
+
+```{r macse, eval=FALSE, include=TRUE}
+# Command for MSA using MACSE software through Ubuntu
+java -jar macse_v0.9b1.jar -i GbA_dna.fasta -o MACSE_MSA_GbA_dna.fasta -d 1
+
+```
+
+Observe as segment lengths are all multiple of 3.
+
+```{r check_msa_03, echo=TRUE, message=FALSE, warning=FALSE, fig.height=16, fig.width=14, fig.cap="MSA from MACSE using the dataset with 43 globin sequences."}
+
+# Checking the MSA generated by MACSE
+msa_macse <- readDNAMultipleAlignment("MACSE_MSA_GbA_dna.fasta",
+                                 format = "fasta")
+checkAlignment(as.DNAbin(msa_macse), check.gaps = TRUE, plot = TRUE,
+               what = 1:4)
+
+```
+
+\newpage
+
+The MACSE MSA was used for further analyses of selection signatures and ancestral sequence reconstruction using codon substitution models.
+
+# Phylogenetic reconstruction
+
+We reconstructed the phylogeny of our globin data set using both, Bayesian and Maximum-Likelihood (ML) approaches. We chose the best models of nucleotide substitution based on the lowest Bayesian Information Criterion (BIC) scores estimated by ML.
+
+## Maximum-likelihood phylogeny reconstruction
+
+We performed ML analysis on IQ-Tree version 1.6.12 [@Nguyen2015] implemented from the web server (http://iqtree.cibiv.univie.ac.at/) [@Trifinopoulos2016]. We evaluated support for the branches with 10000 pseudoreplicates by the ultrafast bootstrap procedure in IQ-Tree [@Hoang2018]. The nucleotide substitution model was chose automatically through ModelFinder algorithm implemented on IQ-Tree server [@Kalyaanamoorthy2017]. The Kimura two-parameter model (K2P or K80) [@Kimura1980] with a gamma distribution with four discrete categories ($\Gamma_4$) to model different substitution rates between sites plus some invariable sites (I) was the best model sorted by BIC scores. The log-likelihood of the consensus tree is -7340.386723. Also, the rate matrix Q is given in Table S1.  
+
+```{r rate_matrix_ML, echo=FALSE, message=FALSE, warning=FALSE}
+
+library(kableExtra)
+t <- c(-1, 0.5612, 0.2194, 0.2194)
+c <- c(0.5612, -1, 0.2194, 0.2194)
+a <- c(0.2194, 0.2194, -1, 0.5612)
+g <- c(0.2194, 0.2194, 0.5612, -1)
+Q <- cbind(t, c, a, g)
+row.names(Q) <- c("t", "c", "a", "g")
+kable(as.data.frame(Q), caption = "Rate matrix Q estimated by maximum-likelihood on IQ-Tree using K80 + $\\Gamma_4$ + I model of nucleotide substitution.")
+
+```
+
+As we can see, _transitions_, substitutions between two pyrimidines (T $\leftrightarrow$ C) or between two purines (A $\leftrightarrow$ G), are more common than _transversions_, substitutions between a pyrimidine and a purine (T, C $\leftrightarrow$ A, G). The proportion of invariable sites is 0.09747 and the shape parameter ($\alpha$) of the $\Gamma$ distribution is 2.037.
+
+## Bayesian phylogeny reconstruction
+
+We used MrBayes software version 3.2.7 [@Ronquist2012] for Bayesian reconstruction.  We used MEGAX software [@Kumar2018] to estimate the best nucleotide substitution model based on BIC scores for Bayesian reconstruction. Again, the K80 + $\Gamma_4$ + I was the best model sorted by BIC scores. We settled the Bayesian analysis with two independent runs with four simultaneous chains during 2 $\times$ $10^7$ generations, sampling every 1000th generation. The final average standard deviation of split frequencies was <0.01 before the runs did reach convergence. We analyzed convergence by the estimated potential scale reduction factor, which was 1.0 or near this. We discarded 25% of the initial samples and estimated the posterior probabilities from the 15000 final trees from a majority rule of consensus. We used the functions of the _ips_ package [@ips] to write the NEXUS file, but we ran the analysis outside RStudio through the Windows executable for MrBayes.
+
+```{r mrbayes_nexus, eval=FALSE, include=TRUE}
+
+# PATH global environmental variable to MrBayes executable
+Sys.setenv(PATH = "D:\\Biblioteca\\R scripts\\Phylogenetic Analysis;")
+# Read a MSA as fasta and convert it to a DNAbin object. Example:
+msa3 <- readDNAMultipleAlignment("MAFFT_E-INS-i_MSA_GbA_dna.fasta",
+                                 format = "fasta")
+msa3 <- as.DNAbin(msa3)
+# K80 + Gamma + I
+mrbayes.lset(nst = 2, rates = "invgamma")
+# Set Markov chain Monte Carlo (MCMC) parameters
+mrbayes.mcmc(ngen = 20000000, nruns = 2, nchains = 4,
+                     samplefreq = 1000, relburnin = "yes")
+# Printing the NEXUS file
+mrbayes(msa3, file = "GbA_bayesian.con.tre",
+        lset = mrbayes.lset(nst = 2, rates = "invgamma"),
+        mcmc = mrbayes.mcmc(ngen = 20000000, nruns = 2, nchains = 4,
+                            samplefreq = 1000, printfreq = 1000,
+                            relburnin = "yes"),
+        burnin = 10, contype = "halfcompat", exec = "mb.3.2.7-win64.exe",
+        run = FALSE)
+
+```
+
+We used the command below in MrBayes to start the analysis.
+
+```{r mrbayes_run, eval=FALSE, include=TRUE}
+
+Execute GbA_bayesian.con.tre
+
+```
+
+The arithmetic mean of the log-likelihood for the two runs is -7372.684. The proportion of invariable sites is 0.09710881, and the shape parameter ($\alpha$) of the $\Gamma$ distribution is 2.049600. The transition/transversion rate ratio ($\kappa$) is 2.537417, very close to the value for the ML reconstruction.
+
+## Plotting trees and associated data
+
+We used the R packages _ape_ (version 5.5) [@Paradis2019] and _ggtree_ (version 3.2.0) [@Yu2017; @Yu2018; @Yu2020] for exploratory analysis of the gene trees.
+
+The script bellow is self explanatory. 
+
+```{r consensus_tree_ML, eval=FALSE, include=TRUE}
+
+# Reading the consensus NEWICK tree from IQ-TREE and writing as a NEXUS file
+read.tree("IQ-TREE_GbA_consensus_tree_26-07-2021.nwk") -> bootTree
+write.nexus(bootTree, file = "GbA_gene_tree_ML.nex")
+
+```
+
+The MrBayes output tree is already in NEXUS format, but we need to extract only one tree.
+
+```{r bayesian_tree, eval=FALSE, include=TRUE}
+
+# In MrBayes, we need the .con.tre file generated by conformat=simple function.
+read.nexus("GbA_bayesian.con.tre") -> bayesTree
+bayesTree[[1]]->bayesTree #Extracts one of the two trees in the .con file.
+write.nexus(bayesTree, file = "GbA_gene_tree_bayesian.nex")
+
+```
+
+Now, we will plot the gene trees with branch support values and tip labels. And we will re-root them using the $\alpha^E$-globins from salamanders (Caudata) and caecilians (Gymnophiona) as outgroups.
+
+```{r plot_ML_tree, echo=TRUE, message=FALSE, warning=FALSE, fig.height=10, fig.width=8, fig.cap="Maximum likelihood phylogram. We used the MAFFT E-INS-i MSA of the 43 globins dataset for phylogeny reconstruction through the model K80 + $\\Gamma_4$ + I in IQ-TREE. Numbers in the nodes are bootstrap percentages calculated using 10000 pseudoreplicates by the ultrafast bootstrap procedure implemented in IQ-TREE. The log-likelihood of the tree is -7340.386723."}
+
+# Reading and plotting trees with GGTREE
+library(ggtree)
+# Reading the ML tree
+bootTree <- read.nexus("GbA_gene_tree_ML.nex")
+p1 <- ggtree(bootTree)
+# Getting the internal node number
+MRCA(p1, "Ame_Hba_07", "Xtr_Hba_01")
+# Re-rooting gene trees
+bootTree <- root.phylo(bootTree, node = 45)
+# Plotting the ML tree + tip labels + scale bar + bootstrap percentages in the nodes
+p1 <- ggtree(bootTree, color="darkgray")
+p1 + geom_tiplab(size=3)  + geom_treescale(width = 0.1) + geom_nodelab(size=3, hjust=-.3) +
+xlim_tree(1.2)
+
+```
+
+\newpage
+
+```{r plot_bayesian_tree, echo=TRUE, message=FALSE, warning=FALSE, fig.height=10, fig.width=8, fig.cap="Bayesian phylogram. We used the MAFFT E-INS-i MSA of the 43 globins dataset for phylogeny reconstruction through the model K80 + $\\Gamma_4$ + I in MrBayes. Numbers in the nodes are Bayesian posterior probabilities calculated through a majority rule of consensus of the last 15000 trees. The log-likelihood of the tree is -7372.684."}
+# Reading the Bayesian tree
+bayesTree <- read.nexus("GbA_gene_tree_bayesian.nex")
+p2 <- ggtree(bayesTree)
+# Getting the internal node number
+MRCA(p2, "Ame_Hba_07", "Xtr_Hba_01")
+# Re-rooting gene trees
+bayesTree <- root.phylo(bayesTree, node = 45)
+# Plotting the Bayesian tree + tip labels + scale bar +
+# Bayesian posterior probabilities in the nodes
+p2 <- ggtree(bayesTree, color="darkgray")
+p2 + geom_tiplab(size=3)  + geom_treescale(width = 0.1) + geom_nodelab(size=3, hjust=-.3) +
+  xlim_tree(1.2)
+
+```
+
+\newpage
+
+Now, we will compare both trees.
+
+```{r tree_comparison, echo=TRUE, message=FALSE, warning=FALSE}
+
+comparePhylo(bootTree, bayesTree, plot = FALSE, use.edge.length = TRUE)
+
+```
+
+As the ML tree has fewer politomies, we used the ML topology to plot the different MSA at the tips of the tree. We started with the MAFFT E-INS-i MSA.
+
+```{r plot_tree_msa_nuc, echo=TRUE, message=FALSE, warning=FALSE, fig.height=12, fig.width=10, fig.cap="ML tree plus MAFFT E-INS-i dna MSA, also referred as nucleotide alignment.", cache=TRUE}
+
+# Plotting tree plus msa
+pmsa <- p1 + geom_tiplab(size=3)
+# dna msa as colored strands
+msaplot(pmsa, fasta = "MAFFT_E-INS-i_MSA_GbA_dna.fasta", offset = 0.5,
+        width = 3, color = NULL)
+
+```
+
+\newpage
+
+Now, we will plot the MACSE MSA.
+
+```{r plot_tree_msa_cod, echo=TRUE, message=FALSE, warning=FALSE, fig.height=10, fig.width=10, fig.cap="ML tree plus MACSE MSA, also referred as codon alignment.", cache=TRUE}
+
+msaplot(pmsa, fasta = "MACSE_MSA_GbA_dna.fasta", offset = 0.5,
+        width = 3, color = NULL)
+
+```
+
+\newpage
+
+Because we will perform ancestral sequence reconstructions using amino acid substitution models, we translated the coding sequences and performed a MSA using model L-INS-i from MAFFT on the web server (https://mafft.cbrc.jp/alignment/server/) [@Katoh2019].
+
+```{r translate_dataset, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Translating and writing the GbA amino acid sequence data set
+gba.aa <- translate(gba.dna)
+gba.aa
+writeXStringSet(gba.aa, "GbA_aa.fasta")
+
+```
+
+We will also plot the MSA of the amino acid sequences on the ML topology.
+
+```{r plot_tree_msa_aa, echo=TRUE, message=FALSE, warning=FALSE, fig.height=12, fig.width=12, fig.cap="ML tree plus MAFFT L-INS-i aa MSA, also referred as amino acid alignment.", cache=TRUE}
+
+# aa msa as colored strands
+msaplot(pmsa, fasta = "MAFFT_L-INS-i_MSA_GbA_aa.fasta", offset = 0.5,
+        width = 3, color = NULL)
+
+```
+
+\newpage
+
+We will plot the same MSA as before, but highlighting only the cysteine residues.  
+
+```{r plot_tree_msa_aa_Cys, echo=TRUE, message=FALSE, warning=FALSE, fig.height=12, fig.width=12, fig.cap="ML tree plus MAFFT L-INS-i aa MSA, also referred as amino acid alignment, where we highlight the cysteine residues.", cache=TRUE}
+
+# aa msa as colored strands
+msaplot(pmsa, fasta = "MAFFT_L-INS-i_MSA_GbA_aa.fasta", offset = 0.5,
+        width = 3, color = c("c" = "yellow3", "-" = "white"))
+
+```
+
+\newpage
+
+Visualizing the MSA in the tips of the gene tree allows us to evaluate the occurrence of insertions and deletions in a phylogenetic context. That is important, because GbA is smaller than all other vertebrate globin sequences, being up to nine residues shorter than the average $\alpha$-globin chain from vertebrates. So, some deletions occurred in the neofunctionalization of the GbA. Maybe, the deletions are involved in the loss of subunit contact residues that permit $\alpha$-globin chains to form homodimers. We will investigate this issue using ancestral sequence reconstruction and structural bioinformatics tools later. Here, we will concentrate on inferring the internal branches where the indels probably occurred. Although all alignments are similar, they also suggest some differences, specially the position of some gaps, suggesting slightly different scenarios for the occurrence of deletions along the internal branches of the _GbA_ phylogeny. Another reason to worry about indels here is because the algorithms for ancestral sequence reconstruction (ASR) we'll use later do not account for indels. So, we need to withdraw manually the indels artifacts of the inferred ancestors.
+
+__Deletion 1__: We can observe in the nucleotide, codon, and amino acid alignments a deletion of two residues at the C-terminal in all _GbA-like_ genes. Because this deletion is the only that occurred in all _GbA-like_ genes, we can infer that it occurred in the beginning of the _GbA-like_ gene evolution from the precursor $\alpha^E$-globin gene. This is the only deletion that occurred in _Lle_HbGbA1_. Because the C-terminal deletion is likely not involved in the loss of the subunit interface, it is possible that _Lle_HbGbA1_ encodes a protein capable to form homodimers.
+
+We will discuss the other deletions using as reference the structural elements of the well characterized $\alpha$-chain from the human Hb. The $\alpha$-chain possesses a length of 141 aa (without the initial Met), whose secondary structure is composed by seven $\alpha$-helices, labeled from A to H (but without the $\alpha$-helix D). That is because the structural elements are in turn characterized using the myoglobin (Mb) structure as reference, with  153 aa and eight $\alpha$-helices. Each residue is numbered according to their position at the helical or non-helical segments. For example, His F8 is the eighth residue of the $\alpha$-helix F, also known as the proximal His conserved in all functional globins, along with Phe CD1, the first residue in the non-helical region between the $\alpha$-helices C and D [@Storz2019a]. So, in the case of the __Deletion 1__ above, we can say that the residues at the sites HC2 and HC3, the second and third residues in the non-helical C-terminal region, were deleted on nucleotide and amino acid alignments. The codon alignment suggests that HC1 and HC2 were deleted instead.
+
+__Deletion 2__: The remaining deletions occurred only on Neobatrachia clade. But there are some uncertainties among different alignments. First, the Neobatrachia present two main clades of _GbA-like_ genes. [We will discuss more later.] One of them is present in Bufonidae and Ranidae species and it is composed by the monomeric globin obtained from the heart of _Rana catesbeiana_ (_Rca_GbA_) and its ortologs. The other clade is present only in species of the Bufonidae family, each species bearing multiple copies, suggesting evolution by duplication and subfunctionalization. We will call them GbA-I and GbA-II clades, respectively.
+
+Only the codon alignment suggests that a deletion occurred on the branch of the last common ancestor of the GbA-I and GbA-II clades. The deletion comprises the residues at the sites H2, H3, and H4. Since the subunit contacts involved on the assembly of heterodimers and homodimers occur between residues localized in the $\alpha$-helices B, G, and H [@Pillai2020], it is possible that these deletions caused the loss of the homodimeric state. If the codon alignment from MACSE software is correct, it is possible that the common ancestor of the Neobatrachia already possessed the mentioned deletion. But the nucleotide and amino acid alignments slightly disagree on the position of gaps, suggesting that deletions in nearby sites occurred independently in the lineage of GbA-I and GbA-II clades. The nucleotide alignment suggests that the deletion occurred at sites H1.1 (after the first nucleotide of the codon that encodes H1), H2, H3, and H4.0 (until the first nucleotide of the codon that encodes H4) in the GbA-I clade and at sites GH4.1, GH5, H1, H2, and H3.0 in the GbA-II clade. The amino acid alignment suggests that the deletion occurred at the sites H2, H3, and H4 in the GbA-I clade and at the sites GH4, GH5, H1, and H2 in the GbA-II clade. We think the scenario suggested by the codon alignment is more simple, but observe as it also suggests that a single residue deletion occurred at the site GH3 in the GbA-II clade, but not in the GbA-I clade. In conclusion, the three alignments suggest different times and sites for the deletion of the residues localized at the GH non-helical region and the $\alpha$-helix H. We will refer to all these possibilities as __Deletion 2__.
+
+__Deletion 3__: The third deletion occurred only in the GbA-I clade, suggesting that it occurred after the duplication event that originated the two main Neobatrachia GbA clades. This also suggests that both clades were present in the ancestor of Ranidae species, but the GbA-II was deleted in the Ranidae family. In the nucleotide alignment, the deletion occurred at the sites F1.1, F2, F3, F4, and F5.0. In the codon alignment, the deletion occurred at the sites EF5, EF6, EF7, and EF8. The amino acid alignment suggests that residues at the sites EF4, EF5, EF6, and EF7 were deleted instead. Thus, if the third deletion has effects on the subunit interface, it was an indirect effect, maybe by changing the positioning of the $\alpha$-helix G.
+
+## Speciation and duplication inference
+
+We obtained the species tree from VertLife.org (https://vertlife.org/) [@Jetz2018]. We used 1000 trees to create the species tree through a majority rule of consensus using the code below.
+
+```{r species_tree_reviewed, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Species tree.", cache=FALSE}
+
+# Loading the series of trees
+sp.tree <- read.nexus("Speciation_duplication_inference/amphibians_trees.nex")
+# Obtaining the consensus tree through majority-rule of consensus
+mrc_sp.tree <- consensus(sp.tree, p = 0.5, check.labels = TRUE)
+write.tree(mrc_sp.tree,
+           file = "Speciation_duplication_inference/mrc_amphibians_tree.nwk")
+mrc_sp.tree <- root.phylo(mrc_sp.tree, outgroup = "Microcaecilia_unicolor", 
+                          resolve.root = TRUE)
+plot.phylo(mrc_sp.tree)
+
+```
+
+\newpage
+
+We used the Generalized Speciation Duplication Inference software from the forester package to infer speciation and duplication events on the gene tree with provided taxonomic information in the phyloXML format [@Zmasek2001; @Zmasek2002; @Han2009]. We will map on the ML tree bellow the speciation events with green points and duplication events with red points.
+
+```{r speciation_duplication, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Speciation and duplication inference. Green points depicts speciation events while red points depicts duplication events.", cache=TRUE}
+
+# We need to select the nodes with speciation and duplication events
+psd <- ggtree(bootTree) + geom_tiplab(size=2) + xlim_tree(1.2)
+psd + geom_point2(aes(subset = node == 44), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 46), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 48), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 51), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 55), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 65), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 66), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 67), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 68), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 69), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 71), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 72), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 73), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 74), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 75), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 77), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 78), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 79), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 80), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 81), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 82), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 83), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 84), size = 2, color = "red", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 45), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 47), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 49), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 50), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 52), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 53), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 54), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 56), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 57), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 58), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 59), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 60), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 61), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 62), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 63), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 64), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 70), size = 2, color = "green", 
+              shape = 16) +
+  geom_point2(aes(subset = node == 76), size = 2, color = "green", 
+              shape = 16)
+
+
+```
+
+## Visualizing the GbA phylogeny
+
+We used the script below that we found on Dechronization blog (https://treethinkers.blogspot.com/2008/10/labeling-trees-posterior-probability.html) to combine bootstrap support values and Bayesian posterior probabilities on a single topology. We modified the original script as we explain below. 
+
+```{r plotbayesboot, eval=FALSE, include=TRUE}
+
+# Combining bootstrap values and Bayesian posterior probabilities
+#
+# The getAllSubTrees function below is a necessary subfunction that atomizes a
+# tree into each individual subclade and was provided compliments of Luke 
+# Harmon.
+getAllSubtrees <- function(phy, minSize=2) 
+{
+  res <- list() 
+  count = 1 
+  ntip <- length(phy$tip.label) 
+  for(i in 1:phy$Nnode) 
+  { 
+    l <- tips(phy, ntip+i) 
+    bt <- match(phy$tip.label, l) 
+    if(sum(is.na(bt)) == 0) 
+    {
+      st <- phy 
+    } 
+    else st <- drop.tip(phy, phy$tip.label[is.na(bt)]) 
+    if(length(st$tip.label)>=minSize) 
+    { 
+      res[[count]] <- st 
+      count <- count+1 
+    }
+  } 
+  res
+}
+
+# The plotBayesBoot function below plots both posterior probability and 
+# bootstrap values on each node of the consensus tree obtained from your
+# Bayesian analysis. Bootstrap values will appear in bold text immediately
+# below and to the left of the node they support, whereas Bayesian posterior
+# probabilities will appear in regular face above and to the left of the node.
+
+plotBayesBoot <- function(bayesTree,bootTree) {
+  getAllSubtrees(bayesTree)->bayesSub
+  getAllSubtrees(bootTree)->bootSub
+  bootList<-matrix("<50",Nnode(bayesTree),1)
+  #The commands below compare all the subclades in the Bayes tree to all the 
+  #subclades in the bootstrap tree, and vice versa, and identifies all those 
+  #clades that are identical.
+  for(i in 1:Nnode(bayesTree)) {
+    for(j in 1:Nnode(bootTree)) {
+      match(bayesSub[[i]]$tip.label[order(bayesSub[[i]]$tip.label)],
+            bootSub[[j]]$tip.label[order(bootSub[[j]]$tip.label)])->shared
+      match(bootSub[[j]]$tip.label[order(bootSub[[j]]$tip.label)], 
+            bayesSub[[i]]$tip.label[order(bayesSub[[i]]$tip.label)])->shared2
+      if(sum(is.na(c(shared,shared2)))==0) {
+        bootTree$node.label[j]->bootList[i]
+      }}}
+  plot(bayesTree, cex=1, lwd=0.5, no.margin = TRUE) #Plots your Bayesian 
+  # consensus tree
+  nodelabels(bayesTree$node.label, adj=c(1.2, -0.3), frame="n", cex=1, font=1)
+  #Adds posterior probability values to the tree. Change the 'cex' value to 
+  #make the font smaller or larger. A value of 1 will give you a readable 
+  #result in the R quartz window, but a value closer to 0.25 might be better
+  #for publication)
+  nodelabels(bootList, adj=c(1.4, 1.3), frame="n", cex=1, font=2) #Adds 
+  #bootstrap values.
+}
+
+# We edited the previous function to perform the reciprocal operation,
+# i.e., plotting Bayesian posterior probabilities on the topology obtained by
+# maximum-likelihood.
+plotBootBayes <- function(bootTree,bayesTree) {
+  getAllSubtrees(bayesTree)->bayesSub
+  getAllSubtrees(bootTree)->bootSub
+  bayesList<-matrix("<50",Nnode(bootTree),1)
+    for(i in 1:Nnode(bootTree)) {
+    for(j in 1:Nnode(bayesTree)) {
+      match(bootSub[[i]]$tip.label[order(bootSub[[i]]$tip.label)],
+            bayesSub[[j]]$tip.label[order(bayesSub[[j]]$tip.label)])->shared
+      match(bayesSub[[j]]$tip.label[order(bayesSub[[j]]$tip.label)], 
+            bootSub[[i]]$tip.label[order(bootSub[[i]]$tip.label)])->shared2
+      if(sum(is.na(c(shared,shared2)))==0) {
+        bayesTree$node.label[j]->bayesList[i]
+      }}}
+  plot(bootTree, cex=1, lwd=0.5, no.margin = TRUE)
+  nodelabels(bayesList, adj=c(1.2, -0.3), frame="n", cex=1, font=1)
+  nodelabels(bootTree$node.label, adj=c(1.4, 1.3), frame="n", cex=1, font=2)
+}
+
+```
+
+Now, we will plot the ML tree with bootstrap support values and Bayesian posterior probabilities for selected branches, plus species tree and annotate the tree.  
+
+```{r plotBootBayes, echo=TRUE, message=FALSE, warning=FALSE, fig.height=10, fig.width=8, fig.cap="Maximum likelihood phylogram with combined support values. Bayesian posterior probabilities are shown above the nodes. Bootstrap percentages are shown below the nodes in bold face.", cache=TRUE}
+
+library(geiger)
+getAllSubtrees <- function(phy, minSize=2) 
+{
+  res <- list() 
+  count = 1 
+  ntip <- length(phy$tip.label) 
+  for(i in 1:phy$Nnode) 
+  { 
+    l <- tips(phy, ntip+i) 
+    bt <- match(phy$tip.label, l) 
+    if(sum(is.na(bt)) == 0) 
+    {
+      st <- phy 
+    } 
+    else st <- drop.tip(phy, phy$tip.label[is.na(bt)]) 
+    if(length(st$tip.label)>=minSize) 
+    { 
+      res[[count]] <- st 
+      count <- count+1 
+    }
+  } 
+  res
+}
+plotBootBayes <- function(bootTree,bayesTree) {
+  getAllSubtrees(bayesTree)->bayesSub
+  getAllSubtrees(bootTree)->bootSub
+  bayesList<-matrix("<50",Nnode(bootTree),1)
+    for(i in 1:Nnode(bootTree)) {
+    for(j in 1:Nnode(bayesTree)) {
+      match(bootSub[[i]]$tip.label[order(bootSub[[i]]$tip.label)],
+            bayesSub[[j]]$tip.label[order(bayesSub[[j]]$tip.label)])->shared
+      match(bayesSub[[j]]$tip.label[order(bayesSub[[j]]$tip.label)], 
+            bootSub[[i]]$tip.label[order(bootSub[[i]]$tip.label)])->shared2
+      if(sum(is.na(c(shared,shared2)))==0) {
+        bayesTree$node.label[j]->bayesList[i]
+      }}}
+  plot(bootTree, cex=1, lwd=0.5, no.margin = TRUE)
+  nodelabels(bayesList, adj=c(1.2, -0.3), frame="n", cex=1, font=1)
+  nodelabels(bootTree$node.label, adj=c(1.4, 1.3), frame="n", cex=1, font=2)
+}
+plotBootBayes(bootTree, bayesTree)
+
+```
+
+\newpage
+
+```{r GbA_phylogeny_paper_reviewed, echo=TRUE, message=FALSE, warning=FALSE, fig.height=6, fig.width=8, fig.cap="Maximum likelihood phylogram of amphibian $\\alpha^E$-globins plus globin A genes. The tree was reconstructed under the K80 + $\\Gamma_4$ + I model of nucleotide substitution in IQ-Tree. Bold numbers below the nodes are maximum likelihood bootstrap percentages. Numbers above the nodes are Bayesian posterior probabilities from MrBayes. Bayesian analysis was also performed under the K80 + $\\Gamma_4$ + I model of nucleotide substitution. Colored rectangles highlight the Neobatrachia GbA-I (blue) and GbA-II (orange) clades. The cladogram on the right depicts the expected organismal phylogeny, highlights the main amphibian clades, and provides the abbreviation of the species names used to label globins throughout the manuscript."}
+
+# Changing the decimal places of posterior probabilities to 2
+bayesTree2 <- bayesTree
+as.numeric(bayesTree2$node.label) -> a
+format(a, digits = 2) -> b
+as.character(b) -> bayesTree2$node.label
+rm(a, b)
+p1 <- ggtree(bootTree, color = "darkgray", size = 0.5, ladderize = TRUE)
+# Node in the bootTree for subsetting: 46, 48, 50, 51, 54, 55, 56, 65
+# Subsetting bootstrap values stored as node labels
+q1 <- ggtree(bootTree)
+d1 <- q1$data
+d1 <- d1[!d1$isTip,]
+d1 <- d1[!d1$node=="Root",]
+subset_labels1 <- d1[c(3, 5, 7, 8, 11, 12, 13, 22), ]
+# Subsetting and adding Bayesian posterior probabilities
+p2 <- ggtree(bayesTree2)
+q2 <- ggtree(bayesTree2)
+d2 <- q2$data
+d2 <- d2[!d2$isTip,]
+d2 <- d2[!d2$node=="Root",]
+subset_labels <- d1[c(3, 5, 7, 8, 11, 12, 13, 22), ]
+d3 <- d1
+d3$label[c(3, 5, 7, 8, 11, 12, 13, 22)] <- d2$label[c(3, 5, 7, 8, 11, 12, 13,
+                                                      22)]
+subset_labels2 <- d3[c(3, 5, 7, 8, 11, 12, 13, 22), ]
+## Plotting globin gene tree plus species tree
+# Plotting and editing the species tree
+speciesTree <- 
+  read.tree("Species_tree_labels.nwk")
+speciesTree <- root.phylo(speciesTree, outgroup = "Microcaecilia_unicolor_Mun", 
+                          resolve.root = TRUE)
+sp1 <- ggtree(speciesTree, color="darkgray", size=1) +
+  geom_tiplab(size = 3, color = "black", fontface = 3) +
+  xlim_tree(55)
+p1 + geom_tiplab(size = 3, color = "black", fontface = 1) + xlim_tree(1.3) +
+  geom_treescale(x=1.0, y=4, width=0.1, color='black', fontsize=3,
+                 linesize=0.5, offset=0.5) + 
+  geom_highlight(node = 56, fill = "steelblue", alpha = 0.1, extend = 0.25) +
+  geom_highlight(node = 65, fill = "tan1", alpha = 0.1, extend = 0.25) +
+  geom_cladelabel(56, label = expression(GbA-I), offset = 0.3) +
+  geom_cladelabel(65, label = expression(GbA-II), offset = 0.35) + 
+  geom_text2(aes(label=label), data = subset_labels1, size = 2.5, 
+             fontface = "bold", hjust = 1.1, vjust = 1.25) +
+  geom_text2(aes(label=label), data = subset_labels2, size = 2.5,
+               hjust = 1.1, vjust = -.25) + 
+  geom_rootedge(rootedge = .02, color = "darkgray") + 
+  xlim_tree(1.5) +
+  sp1 + 
+  geom_cladelabel(2, label = expression(Gymnophiona), offset = 30, angle = 0) + 
+  geom_cladelabel(1, label = expression(Caudata), offset = 30) + 
+  geom_cladelabel(3, label = expression(Pipoidea), offset = 30) + 
+  geom_cladelabel(4, label = expression(Pelobatoidea), offset = 30) + 
+  geom_cladelabel(21, label = expression(Neobatrachia), offset = 30, 
+                  offset.text = 1, angle = 00) + 
+  geom_cladelabel(24, label = expression(Bufonidae), offset = 27, 
+                  offset.text = 1, angle = 90, hjust = .5) + 
+  geom_cladelabel(20, label = expression(Ranidae), offset = 27, 
+                  offset.text = 1, angle = 90) + 
+  geom_tiplab(aes(image = "3af2605e-49a6-46d3-a9b1-32042629dfac",
+                  node = 2), geom="phylopic", size=.075,
+              color="black", alpha=.7, offset = -6,
+              nudge_y = -1) + 
+  geom_tiplab(aes(image = "d1644001-d86d-4541-9501-295a873aed2a",
+                  node = 2), geom="phylopic", size=.075,
+              color="black", alpha=.7, offset = -6,
+              nudge_y = 0) + 
+  geom_tiplab(aes(image = "7e9286b9-0e49-46c2-88f6-218291fb06a4",
+                  node = 2), geom="phylopic", size=.075,
+              color="black", alpha=.7, offset = -6,
+              nudge_y = 1) + 
+  geom_tiplab(aes(image = "ee4fe0d2-2905-4b0b-b473-82d13ad4793e",
+                  node = 4), geom="phylopic", size=.075,
+              color="black", alpha=.7, offset = -6,
+              nudge_y = 2) + 
+  geom_tiplab(aes(image = "411ddd2c-12e8-4e92-9399-be8406d00356",
+                  node = 4), geom="phylopic", size=.075,
+              color="black", alpha=.7, offset = -7,
+              nudge_y = 4) + 
+  geom_tiplab(aes(image = "c07ce7b7-5fb5-484f-83a0-567bb0795e18",
+                  node = 4), geom="phylopic", size=.06,
+              color="black", alpha=.7, offset = -11,
+              nudge_y = 8)
+
+```
+
+\newpage
+
+# Gene synteny analysis and intron positions
+
+We inspected the synteny of the _GbA_-type genes in the RefSeq genome of the common toad, _Bufo bufo_, through the Genome Data Viewer browser from NCBI. We drew a model of the genomic region of the _GbA_ genes using IBS 1.0.3 (http://ibs.biocuckoo.org/) [@Liu2015], as we can see in the figure below. The _GbA_ locus is located on the same chromosome as _Adgb_, where it is flanked upstream by two _ANKRD9_, _YPEL5_ and _LBH_ genes; and it is flanked downstream by two _ALK_, _CLIP4_, and _PCARE_ genes. The cluster of _GbA_-type genes is composed by various copies of the GbA-II clade followed by one single copy of the GbA-I clade.  
+
+![Unscaled depiction of the genomic organization and synteny of the GbA region in the genome of _Bufo bufo_ (Anura:Neobatrachia:Bufonidae). Blue arrow depicts GbA-I gene; orange arrows depict GbA-II genes; pink arrow depicts Adgb gene; gray arrows depict genes flanking globin genes; white arrows depict globin pseudogenes. // means that a region of the chromosome linking the GbA and Adgb loci was removed from the model for clarity.](Figures/Bbu_gene_synteny.jpg)  
+
+We analyzed the intron positions of genes belonging to both GbA clades of Neobatrachia and the Pelobatoidea _Lle_HbGbA1_ gene. All genes presented the conserved intron positions at B12.2 and G7.0.  
+
+![Intron positions.](Figures/introns.jpg)
+
+\newpage
+
+# Molecular evolution analysis and ancestral sequence reconstruction
+
+We performed molecular evolution analyses and ancestral sequence reconstruction (ASR) in PAML software [@Yang1997; @Yang2007] through the graphical user interface PamlX [@Xu2013]. We ran all molecular evolution analyses three times with different initial parameters to ensure that parameter estimates converged.
+
+## Selection signatures
+
+We used codon substitution models to estimate selection in coding sequences through the $d_N$/$d_S$ statistics. The neofunctionalization process that gave rise to _GbA_ was possibly directed by positive selection. However, we do not know which internal branches of the _GbA_ phylogeny possibly undergone episodes of positive selection. We first used the branch model from CodeML [@Yang1998a; @Yang1998] to estimate the selective restraints in several branches of the _GbA_ phylogeny. We used the codon alignment provided by MACSE as described previously, but we excluded 18 sequences due to very short branch lengths, so that our working dataset comprised only 25 sequences for this analysis. We used the ML gene topology, because our goal was to understand the contribution of selection to gene/protein neofunctionalization instead species adaptation.
+
+We start with a single $\omega$ (= $d_N$/$d_S$) parameter for all branches. But first, we need to load the _treeio_ package (version 1.18.0) [@Wang2020.]
+
+```{r treeio, echo=TRUE, message=FALSE, warning=FALSE}
+
+# treeio package can read a number of output files from several softwares, including PAML
+library(treeio)
+library(ggplot2)
+```
+
+Now, we will read and plot the results for the branch models we specified in codeML.
+
+```{r branch_1w, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Branch model with a single omega parameter. dN/dS = 0.20710. kappa = 1.45388. The log-likelihood is -6551.791220 with 49 free parameters.", cache=TRUE}
+
+# Branch model 1W
+file.path("Molecular evolution analyses_PAML", "CodeML_branch_models", 
+          "1W", "Run1", "CodeML_branch_model_1W") -> fp1
+paml.data_01 <- read.codeml_mlc(mlcfile = fp1)
+ggtree(paml.data_01, aes(color=dN_vs_dS), branch.length = "t") + 
+  scale_color_continuous(name="dN/dS", limits = c(0, 1.5), 
+                         oob=scales::squish, low="darkgreen", high = "red") +
+  geom_tiplab(hjust = -.4) + xlim_tree(5)
+
+```
+
+\newpage
+
+As we can see, the $\omega$ value was 0.20710, indicating that the average codon site is highly restrained by purifying selection on the 25 coding sequences phylogeny. Now, we will set different $\omega$ parameters for different branches and perform the likelihood-ratio test to compare nested models.
+
+```{r codeML_2W_Hba_ancGbA, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Branch model with two omega parameters, one as background and another for the branch of the ancestor of all GbA. dN/dS for branches: 0.20572 (Hba-background) and 0.33208 (ancGbA). kappa = 1.45336. The log-likelihood is -6551.628706 with 50 free parameters.", cache=TRUE}
+
+# CodeML_2W_Hba_ancGbA
+file.path("Molecular evolution analyses_PAML", "CodeML_branch_models", 
+          "2W_ancGbA", "Run1", "CodeML_branch_model_2W_ancGbA") -> fp2
+paml.data_02 <- read.codeml_mlc(mlcfile = fp2)
+ggtree(paml.data_02, aes(color=dN_vs_dS), branch.length = "t") + 
+  scale_color_continuous(name="dN/dS", limits = c(0, 1.5), 
+                         oob=scales::squish, low="darkgreen", high = "red") +
+  geom_tiplab(hjust = -.4) + xlim_tree(5)
+
+```
+
+\newpage
+
+The likelihood ratio test (LRT) can be used to compare two nested models using their maximum log-likelihood values (_l_). The LRT statistic is 2$\Delta$_l_ = 2($l_1$ - $l_0$), which under regular conditions is asymptotically distributed as $\chi^2_{p-q}$ if $H_0$ is true, where p-q is the difference in the number of free parameters between the two models [@Yang2014]. Below, we will compare the branch models with one and two $\omega$ parameters.
+
+```{r LRT001, echo=TRUE}
+
+2*(-6551.628706-(-6551.791220)) # p-q = 1
+# p > 0.05, thus we fail to reject H0.
+
+```
+
+```{r CodeML_2W_Hba_ancGbAN, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Branch model with two omega parameters, one as background and another for the branch of the ancestor of all Neobatrachia GbA. dN/dS for branches: 0.20512 (Hba-background) and 999.00000 (ancGbAN). kappa = 1.45427. The log-likelihood is -6550.234100 with 50 free parameters.", cache=TRUE}
+
+# CodeML_2W_Hba_ancGbAN
+file.path("Molecular evolution analyses_PAML", "CodeML_branch_models", 
+          "2W_ancGbAN", "Run1", "CodeML_branch_model_2W_ancGbAN") -> fp3
+paml.data_03 <- read.codeml_mlc(mlcfile = fp3)
+ggtree(paml.data_03, aes(color=dN_vs_dS), branch.length = "t") + 
+  scale_color_continuous(name="dN/dS", limits = c(0, 1.5), 
+                         oob=scales::squish, low="darkgreen", high = "red") +
+  geom_tiplab(hjust = -.4) + xlim_tree(5)
+
+```
+
+\newpage
+
+```{r LRT002, echo=TRUE}
+
+2*(-6550.234100-(-6551.791220)) # p-q = 1
+# p > 0.05, thus we fail to reject H0.
+
+```
+
+```{r CodeML_2W_Hba_ancGbAB, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Branch model with two omega parameters, one as background and another for the branch of the ancestor of all Bufonidae-specific GbA-II clade. dN/dS for branches: 0.20767 (Hba-background) and 0.18576 (ancGbAB). kappa = 1.45415. The log-likelihood is -6551.767324 with 50 free parameters.", cache=TRUE}
+
+# CodeML_2W_Hba_ancGbAB
+file.path("Molecular evolution analyses_PAML", "CodeML_branch_models", 
+          "2W_ancGbAB", "Run1", "CodeML_branch_model_2W_ancGbAB") -> fp4
+paml.data_04 <- read.codeml_mlc(mlcfile = fp4)
+ggtree(paml.data_04, aes(color=dN_vs_dS), branch.length = "t") + 
+  scale_color_continuous(name="dN/dS", limits = c(0, 1.5), 
+                         oob=scales::squish, low="darkgreen", high = "red") +
+  geom_tiplab(hjust = -.4) + xlim_tree(5)
+
+```
+
+\newpage
+
+```{r LRT003, echo=TRUE}
+
+2*(-6551.767324-(-6551.791220)) # p-q = 1
+# p > 0.05, thus we fail to reject H0.
+
+```
+
+```{r CodeML_2W_Hba_ancGbAI, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Branch model with two omega parameters, one as background and another for the branch of the ancestor of the GbA-I clade. dN/dS for branches: 0.20826 (Hba-background) and 0.12416 (ancGbAI). kappa = 1.45325. The log-likelihood is -6551.698485 with 50 free parameters.", cache=TRUE}
+
+# CodeML_2W_Hba_ancGbAI
+file.path("Molecular evolution analyses_PAML", "CodeML_branch_models", 
+          "2W_ancGbAI", "Run1", "CodeML_branch_model_2W_ancGbAI") -> fp5
+paml.data_05 <- read.codeml_mlc(mlcfile = fp5)
+ggtree(paml.data_05, aes(color=dN_vs_dS), branch.length = "t") + 
+  scale_color_continuous(name="dN/dS", limits = c(0, 1.5), 
+                         oob=scales::squish, low="darkgreen", high = "red") +
+  geom_tiplab(hjust = -.4) + xlim_tree(5)
+
+```
+
+\newpage
+
+```{r LRT004, echo=TRUE}
+
+2*(-6551.698485-(-6551.791220)) # p-q = 1
+# p > 0.05, thus we fail to reject H0.
+
+```
+
+```{r CodeML_2W_Hba_GbA, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Branch model with two omega parameters, one for the Hba clade (excluding GbA) and another for the GbA clade. dN/dS for branches: 0.23999 (Hba-background) and 0.17144 (GbA). kappa = 1.45047. The log-likelihood is -6548.909691 with 50 free parameters.", cache=TRUE}
+
+# CodeML_2W_Hba_GbA
+file.path("Molecular evolution analyses_PAML", "CodeML_branch_models", 
+          "2W_GbA", "Run1", "CodeML_branch_model_2W_GbA") -> fp6
+paml.data_06 <- read.codeml_mlc(mlcfile = fp6)
+ggtree(paml.data_06, aes(color=dN_vs_dS), branch.length = "t") + 
+  scale_color_continuous(name="dN/dS", limits = c(0, 1.5), 
+                         oob=scales::squish, low="darkgreen", high = "red") +
+  geom_tiplab(hjust = -.4) + xlim_tree(5)
+
+```
+
+\newpage
+
+```{r LRT005, echo=TRUE}
+
+2*(-6548.909691-(-6551.791220)) # p-q = 1
+# p < 0.05, thus we reject H0.
+
+```
+
+As the two parameter model with one $\omega$ parameter for the _Hba_ branches and other $\omega$ parameter for the _GbA_ branches fits the data better than the single $\omega$ parameter model, we will use it as background while looking for selection in the branches of the main _GbA_ ancestors.
+
+```{r CodeML_3W_Hba_GbA_ancGbA, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Branch model with three omega parameters, one for the Hba clade (excluding GbA), other for the GbA clade, and another for the branch of the GbA ancestor (ancGbA). dN/dS for branches: 0.23948 (Hba), 0.16855 (GbA), and 0.38624 (ancGbA). kappa = 1.44898. The log-likelihood is -6548.517908 with 51 free parameters.", cache=TRUE}
+
+# CodeML_3W_Hba_GbA_ancGbA
+file.path("Molecular evolution analyses_PAML", "CodeML_branch_models", 
+          "3W_GbA_ancGbA", "Run1", "CodeML_branch_model_3W_GbA_ancGbA") -> fp7
+paml.data_07 <- read.codeml_mlc(mlcfile = fp7)
+ggtree(paml.data_07, aes(color=dN_vs_dS), branch.length = "t") + 
+  scale_color_continuous(name="dN/dS", limits = c(0, 1.5), 
+                         oob=scales::squish, low="darkgreen", high = "red") +
+  geom_tiplab(hjust = -.4) + xlim_tree(5)
+
+```
+
+\newpage
+
+```{r LRT006, echo=TRUE}
+# Comparison with the 1W model
+2*(-6548.517908-(-6551.791220)) # p-q = 2
+# p < 0.05, thus we reject H0.
+# Comparison with the 2W model
+2*(-6548.517908-(-6548.909691)) # p-q = 1
+# p > 0.05, thus we fail to reject H0.
+
+```
+
+```{r CodeML_3W_Hba_GbA_ancGbAN, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Branch model with three omega parameters, one for the Hba clade (excluding GbA), other for the GbA clade, and another for the branch of the Neobatrachia GbA ancestor (ancGbAN). dN/dS for branches: 0.24008 (Hba), 0.16859 (GbA), and 999.00000 (ancGbAN). kappa = 1.45071. The log-likelihood is -6547.002549 with 51 free parameters.", cache=TRUE}
+
+# CodeML_3W_Hba_GbA_ancGbAN
+file.path("Molecular evolution analyses_PAML", "CodeML_branch_models", 
+          "3W_GbA_ancGbAN", "Run1", "CodeML_branch_model_3W_GbA_ancGbAN") -> fp8
+paml.data_08 <- read.codeml_mlc(mlcfile = fp8)
+ggtree(paml.data_08, aes(color=dN_vs_dS), branch.length = "t") + 
+  scale_color_continuous(name="dN/dS", limits = c(0, 1.5), 
+                         oob=scales::squish, low="darkgreen", high = "red") +
+  geom_tiplab(hjust = -.4) + xlim_tree(5)
+
+```
+
+\newpage
+
+```{r LRT007, echo=TRUE}
+# Comparison with the 1W model
+2*(-6547.002549-(-6551.791220)) # p-q = 2
+# p < 0.01, thus we reject H0.
+# Comparison with the 2W model
+2*(-6547.002549-(-6548.909691)) # p-q = 1
+# p > 0.05, thus we fail to reject H0.
+
+```
+
+```{r CodeML_3W_Hba_GbA_ancGbAB, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Branch model with three omega parameters, one for the Hba clade (excluding GbA), other for the GbA clade, and another for the branch of the Bufonidae-specific GbA-II ancestor (ancGbAB). dN/dS for branches: 0.23992 (Hba), 0.17055 (GbA), and 0.19045 (ancGbAB). kappa = 1.45020. The log-likelihood is -6548.889797 with 51 free parameters.", cache=TRUE}
+
+# CodeML_3W_Hba_GbA_ancGbAB
+file.path("Molecular evolution analyses_PAML", "CodeML_branch_models", 
+          "3W_GbA_ancGbAB", "Run1", "CodeML_branch_model_3W_GbA_ancGbAB") -> fp9
+paml.data_09 <- read.codeml_mlc(mlcfile = fp9)
+ggtree(paml.data_09, aes(color=dN_vs_dS), branch.length = "t") + 
+  scale_color_continuous(name="dN/dS", limits = c(0, 1.5), 
+                         oob=scales::squish, low="darkgreen", high = "red") +
+  geom_tiplab(hjust = -.4) + xlim_tree(5)
+
+```
+
+\newpage
+
+```{r LRT008, echo=TRUE}
+# Comparison with the 1W model
+2*(-6548.889797-(-6551.791220)) # p-q = 2
+# p > 0.05, thus we fail to reject H0.
+# Comparison with the 2W model
+2*(-6548.889797-(-6548.909691)) # p-q = 1
+# p > 0.05, thus we fail to reject H0.
+
+```
+
+```{r CodeML_3W_Hba_GbA_ancGbAI, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Branch model with three omega parameters, one for the Hba clade (excluding GbA), other for the GbA clade, and another for the branch of the GbA-I ancestor (ancGbAI). dN/dS for branches: 0.24012 (Hba), 0.17055 (GbA), and 0.19045 (ancGbAB). kappa = 1.45060. The log-likelihood is -6548.895426 with 51 free parameters.", cache=TRUE}
+
+# CodeML_3W_Hba_GbA_ancGbAI
+file.path("Molecular evolution analyses_PAML", "CodeML_branch_models", 
+          "3W_GbA_ancGbAI", "Run1", "CodeML_branch_model_3W_GbA_ancGbAI") -> fp10
+paml.data_10 <- read.codeml_mlc(mlcfile = fp10)
+ggtree(paml.data_10, aes(color=dN_vs_dS), branch.length = "t") + 
+  scale_color_continuous(name="dN/dS", limits = c(0, 1.5), 
+                         oob=scales::squish, low="darkgreen", high = "red") +
+  geom_tiplab(hjust = -.4) + xlim_tree(5)
+
+```
+
+\newpage
+
+```{r LRT009, echo=TRUE}
+# Comparison with the 1W model
+2*(-6548.895426-(-6551.791220)) # p-q = 2
+# p > 0.05, thus we fail to reject H0.
+# Comparison with the 2W model
+2*(-6548.895426-(-6548.909691)) # p-q = 1
+# p > 0.05, thus we fail to reject H0.
+
+```
+
+Now, we will define six $\omega$ parameters, where the major branches of the GbA clade (Pelobatoidea, and Neobatrachia GbA clades I and II), and the ancestral branches of all GbA and only Neobatrachia's GbA will have different parameters, respectively.  
+
+```{r CodeML_6W_GbAP_GbAI_GbAB_ancGbAN_ancGbA, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Branch model with six omega parameters, one for the Hba clade (excluding GbA), one for the Pelobatoidea GbA clade (GbAP), one for the GbA-I clade (GbAI), one for the Bufonidae-specific GbA-II clade (GbAB), one for the ancestor of Neobatrachia GbA (ancGbAN), and one for the ancestor of all GbA (ancGbA). dN/dS for branches: 0.24005 (Hba), 0.00472 (GbAP), 0.14562 (GbAI), 0.27119 (GbAB), 999.00000 (ancGbAN), and 0.41397 (ancGbA). kappa = 1.45644. The log-likelihood is -6538.548936 with 54 free parameters.", cache=TRUE}
+
+# CodeML_6W_GbAP_GbAI_GbAB_ancGbAN_ancGbA
+file.path("Molecular evolution analyses_PAML", "CodeML_branch_models", 
+          "6W_GbAP_GbAI_GbAB_ancGbAN_ancGbA", "Run1", "6W_GbAP_GbAI_GbAB_ancGbAN_ancGbA") -> fp11
+paml.data_11 <- read.codeml_mlc(mlcfile = fp11)
+ggtree(paml.data_11, aes(color=dN_vs_dS), branch.length = "t") + 
+  scale_color_continuous(name="dN/dS", limits = c(0, 1.5), 
+                         oob=scales::squish, low="darkgreen", high = "red") +
+  geom_tiplab(hjust = -.4) + xlim_tree(5)
+
+```
+
+\newpage
+
+```{r LRT010, echo=TRUE}
+# Comparison with the 1W model
+2*(-6538.548936-(-6551.791220)) # p-q = 5
+# p < 0.01, thus we reject H0.
+# Comparison with the 2W model
+2*(-6538.548936-(-6548.909691)) # p-q = 4
+# p < 0.01, thus we reject H0.
+
+```
+
+As we can see, the Pelobatoidea branch represented by _Lle_HbGbA1_ has a long length. We decided to inspect the output file of PAML between the 1$\omega$, 2$\omega$, and 6$\omega$ branch models and we observed the following.
+
+```{r paml_output_01, eval=FALSE, include=TRUE}
+
+ branch          t       N       S   dN/dS      dN      dS  N*dN  S*dS
+  36..17     2.116   321.7   104.3  0.2071  0.3640  1.7578 117.1 183.4
+  36..17     2.361   321.7   104.3  0.1714  0.3605  2.1026 116.0 219.2
+  36..17    50.000   321.6   104.4  0.0047  0.3164 67.0427 101.8 6998.2
+
+```
+
+The long branch is mainly caused by an increase in dS. So, we decided to run another analysis using the Pelobatoidea branch as well as the ancestor of all GbA as background together with the _Hba_ genes.
+
+```{r CodeML_4W_GbAI_GbAB_ancGbAN, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="Branch model with four omega parameters, one for the Hba clade (excluding GbA), one for the GbA-I clade (GbAI), one for the Bufonidae-specific GbA-II clade (GbAB), and one for the ancestor of Neobatrachia GbA (ancGbAN). dN/dS for branches: 0.23825 (Hba), 0.14572 (GbAI), 0.30832 (GbAB), and 999.00000 (ancGbAN). kappa = 1.44566. The log-likelihood is -6543.761161 with 52 free parameters.", cache=TRUE}
+
+# CodeML_4W_GbAI_GbAB_ancGbAN
+file.path("Molecular evolution analyses_PAML", "CodeML_branch_models", 
+          "4W_GbAI_GbAB_ancGbAN", "Run1", "4W_GbAI_GbAB_ancGbAN") -> fp12
+paml.data_12 <- read.codeml_mlc(mlcfile = fp12)
+ggtree(paml.data_12, aes(color=dN_vs_dS), branch.length = "t") + 
+  scale_color_continuous(name="dN/dS", limits = c(0, 1.5), 
+                         oob=scales::squish, low="darkgreen", high = "red") +
+  geom_tiplab(hjust = -.4) + xlim_tree(5)
+
+```
+
+\newpage
+
+```{r LRT011, echo=TRUE}
+# Comparison with the 1W model
+2*(-6543.761161-(-6551.791220)) # p-q = 3
+# p < 0.01, thus we reject H0.
+# Comparison with the 2W model
+2*(-6543.761161-(-6548.909691)) # p-q = 2
+# p < 0.01, thus we reject H0.
+
+```
+
+As we can observe in the figure above, the long branch disappeared. Nevertheless, the branch of the Neobatrachia ancestor possesses a $d_N$/$d_S$ value approaching infinite. We decided to inspect the PAML output between the models 1$\omega$, 2$\omega$, 4$\omega$, and 6$\omega$ to understand why.
+
+```{r paml_output_02, eval=FALSE, include=TRUE}
+
+ branch          t       N       S   dN/dS      dN      dS  N*dN  S*dS
+  36..37     0.396   321.7   104.3  0.2071  0.0682  0.3291  21.9  34.3
+  36..37     0.450   321.7   104.3  0.1714  0.0688  0.4011  22.1  41.8
+  36..37     0.193   321.8   104.2 999.0010  0.0850  0.0001  27.3   0.0
+  36..37     0.233   321.6   104.4 999.0000  0.1028  0.0001  33.1   0.0
+
+```
+
+As we can see, the dN value increases a little from the 2$\omega$ to 4$\omega$/6$\omega$, while dS approaches zero. From the previous analyses, we observed that the Neobatrachia branch shows the major deletions in GbA evolution. In fact, we suspect that the loss of the dimerization happened in the stem Neobatrachia lineage. Thus, we used the branch-site models [@Yang2002b; @Zhang2005; @Yang2005] to verify possible positively selected sites on internal branches of the GbA phylogeny, with special attention to the ancestral Neobatrachia GbA branch. However, the branch-site models did not detect positively selected sites on internal branches of the GbA phylogeny with a Bayes Empirical Bayes (BEB) greater than 0.95, despite some sites were very close.
+
+## Ancestral sequence reconstruction
+
+We used the programs _BaseML_ and _CodeML_ implemented in _PAML_ software [@Yang1997; @Yang2007] for ancestral sequence reconstruction under nucleotide-, amino acid-, and codon-based models through the Empirical Bayes (EB) approach [@Yang1995; @Koshi1996]. We used the _marginal_ reconstruction option.
+
+We used as input tree the ML topology of the consensus tree from IQ-TREE. For further analyses, we are interested only in the ancestors represented by the following nodes: 48, 50, 51, 54, 55, 56, and 65.
+
+```{r asr_tree_nodes, echo=TRUE, message=FALSE, warning=FALSE, fig.height=10, fig.width=8, fig.cap="ML tree from IQ-TREE showing internal node numbers. Nodes of interest for ancestral sequence reconstruction: 48, 50, 51, 54, 55, 56, and 65.", cache=TRUE}
+
+# Plotting the tree topology used for ASR
+asr.tree <- read.tree("IQ-TREE_GbA_consensus_tree_26-07-2021.nwk")
+p.asr <- ggtree(asr.tree)
+p.asr + geom_text(aes(label=node), hjust=-.3) + geom_tiplab() + xlim_tree(1.2)
+```
+
+\newpage
+
+A MSA of the reconstructed ancestors plus human $\alpha$-globin is provided below using the R package _ggmsa_ (version 1.0.0).  
+
+```{r msa_ancestors, echo=TRUE, message=FALSE, warning=FALSE, fig.height=10, fig.width=8, fig.cap="Multiple sequence alignment of ancestral sequences reconstructed using amino acid, codon, and nucleotide substitution models. MSA was performed through model L-INS-i from MAFFT.", cache=TRUE}
+
+library(ggmsa)
+library(Biostrings)
+gba_msa <- readAAMultipleAlignment("MAFFT_L-INS-i_MSA_human_Hba_ancGbA_aa.fasta",
+                                   format = "fasta")
+ggmsa(gba_msa, start = 1, end = 142, font = "helvetical",
+      color = "Chemistry_AA", custom_color = NULL, char_width = 0.9, 
+      none_bg = FALSE, by_conservation = FALSE, position_highlight = NULL, 
+      seq_name = TRUE, border = "white", consensus_views = FALSE,
+      use_dot = FALSE, disagreement = TRUE, ignore_gaps = FALSE, ref = NULL, 
+      show.legend = FALSE) + facet_msa(field = 50)
+
+```
+
+\newpage
+
+The overall accuracy of each ancestor for each type of reconstruction is given in Table S2.
+
+```{r asr_oa, echo=FALSE, message=FALSE, warning=FALSE}
+
+library(kableExtra)
+# Overall accuracy
+OA.dna <- c(0.9531, 0.95686, 0.95527, 0.89136, 0.91429, 0.93614, 0.97912) 
+OA.cod <- c(0.78948, 0.80199, 0.80199, 0.61201, 0.64061, 0.74594, 0.94155)
+OA.aa <- c(0.94079, 0.95177, 0.94752, 0.89237, 0.94202, 0.94645, 0.97945)
+OA <- cbind(OA.aa, OA.dna, OA.cod)
+row.names(OA) <- c("48", "50", "51", "54", "55", "56", "65")
+kable(as.data.frame(OA), caption = "Overall accuracy of the reconstructed ancestors (node numbers 48, 50, 51, 54, 55, 56, and 65 of the ML tree) under amino acid (aa), nucleotide (dna) and codon (cod) substitution models.")
+
+```
+
+As we can see, the overall accuracy was lower in the ancestral sequences reconstructed with codon substitution models, while the amino acid and nucleotide models showed greater accuracy. Also, the ancestor of all GbA (node 54) had the lowest accuracy through all reconstructions. We think this is due to the low taxonomic sampling of Pelobatoidea species (only 1 species and 1 good quality putative sequence). We will also plot the posterior probabilities by each nucleotide/codon/amino acid reconstructed from each model.
+
+First, we will plot the posterior probabilities for the ASR from _BaseML_ using the nucleotide substitution model K80 + $\Gamma_4$.
+
+```{r anc48_nuc_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 48 reconstructed using a nucleotide substitution model.", cache=TRUE}
+
+library(ggplot2)
+library(tidyverse)
+file.path("Ancestral sequence reconstruction", "dna_ASR_aa_prob.txt") -> asrfp1
+dna_ASR_aa_prob <- read.table(asrfp1, row.names=1, quote="\"", comment.char="")
+dna_prob <- dna_ASR_aa_prob %>%
+  select(V7, V9, V10, V13, V14, V15, V24)
+colnames(dna_prob) <- c(48, 50, 51, 54, 55, 56, 65)
+qplot(1:426, `48`, data = dna_prob, geom = "point") + xlab("Nucleotide site") +
+  ylab("Probability") + ggtitle("Ancestral node 48")
+
+```
+
+```{r anc50_nuc_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 50 reconstructed using a nucleotide substitution model.", cache=TRUE}
+
+qplot(1:426, `50`, data = dna_prob, geom = "point") + xlab("Nucleotide site") +
+  ylab("Probability") + ggtitle("Ancestral node 50")
+
+```
+
+```{r anc51_nuc_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 51 reconstructed using a nucleotide substitution model.", cache=TRUE}
+
+qplot(1:426, `51`, data = dna_prob, geom = "point") + xlab("Nucleotide site") +
+  ylab("Probability") + ggtitle("Ancestral node 51")
+
+```
+
+```{r anc54_nuc_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 54 reconstructed using a nucleotide substitution model.", cache=TRUE}
+
+qplot(1:426, `54`, data = dna_prob, geom = "point") + xlab("Nucleotide site") +
+  ylab("Probability") + ggtitle("Ancestral node 54")
+
+```
+
+```{r anc55_nuc_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 55 reconstructed using a nucleotide substitution model.", cache=TRUE}
+
+qplot(1:426, `55`, data = dna_prob, geom = "point") + xlab("Nucleotide site") +
+  ylab("Probability") + ggtitle("Ancestral node 55")
+
+```
+
+```{r anc56_nuc_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 56 reconstructed using a nucleotide substitution model.", cache=TRUE}
+
+qplot(1:426, `56`, data = dna_prob, geom = "point") + xlab("Nucleotide site") +
+  ylab("Probability") + ggtitle("Ancestral node 56")
+
+```
+
+```{r anc65_nuc_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 65 reconstructed using a nucleotide substitution model.", cache=TRUE}
+
+qplot(1:426, `65`, data = dna_prob, geom = "point") + xlab("Nucleotide site") +
+  ylab("Probability") + ggtitle("Ancestral node 65")
+
+```
+
+\newpage
+
+Now, we will plot posterior probabilities for the ASR using the empirical amino acid substitution model LG + $\Gamma_4$ in _CodeML_.
+
+```{r anc48_aa_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 48 reconstructed using an amino acid substitution model.", cache=TRUE}
+
+file.path("Ancestral sequence reconstruction", "aa_ASR_aa_prob.txt") -> asrfp2
+aa_ASR_aa_prob <- read.table(asrfp2, row.names=1, quote="\"", comment.char="")
+aa_prob <- aa_ASR_aa_prob %>%
+  select(V7, V9, V10, V13, V14, V15, V24)
+colnames(aa_prob) <- c(48, 50, 51, 54, 55, 56, 65)
+qplot(1:142, `48`, data = aa_prob, geom = "point") + xlab("Amino acid site") +
+  ylab("Probability") + ggtitle("Ancestral node 48")
+
+```
+
+```{r anc50_aa_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 50 reconstructed using an amino acid substitution model.", cache=TRUE}
+
+qplot(1:142, `50`, data = aa_prob, geom = "point") + xlab("Amino acid site") +
+  ylab("Probability") + ggtitle("Ancestral node 50")
+
+```
+
+```{r anc51_aa_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 51 reconstructed using an amino acid substitution model.", cache=TRUE}
+
+qplot(1:142, `51`, data = aa_prob, geom = "point") + xlab("Amino acid site") +
+  ylab("Probability") + ggtitle("Ancestral node 51")
+
+```
+
+```{r anc54_aa_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 54 reconstructed using an amino acid substitution model.", cache=TRUE}
+
+qplot(1:142, `54`, data = aa_prob, geom = "point") + xlab("Amino acid site") +
+  ylab("Probability") + ggtitle("Ancestral node 54")
+
+```
+
+```{r anc55_aa_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 55 reconstructed using an amino acid substitution model.", cache=TRUE}
+
+qplot(1:142, `55`, data = aa_prob, geom = "point") + xlab("Amino acid site") +
+  ylab("Probability") + ggtitle("Ancestral node 55")
+
+```
+
+```{r anc56_aa_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 56 reconstructed using an amino acid substitution model.", cache=TRUE}
+
+qplot(1:142, `56`, data = aa_prob, geom = "point") + xlab("Amino acid site") +
+  ylab("Probability") + ggtitle("Ancestral node 56")
+
+```
+
+```{r anc65_aa_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 65 reconstructed using an amino acid substitution model.", cache=TRUE}
+
+qplot(1:142, `65`, data = aa_prob, geom = "point") + xlab("Amino acid site") +
+  ylab("Probability") + ggtitle("Ancestral node 65")
+
+```
+
+\newpage
+
+And finally, we will plot the posterior probabilities for the ASR using the codon substitution model.
+
+```{r asr48_cod_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 48 reconstructed using a codon substitution model.", cache=TRUE}
+
+file.path("Ancestral sequence reconstruction", "cod_ASR_aa_prob.txt") -> asrfp3
+cod_ASR_aa_prob <- read.table(asrfp3, row.names=1, quote="\"", comment.char="")
+cod_prob <- cod_ASR_aa_prob %>%
+  select(V11, V15, V17, V23, V25, V27, V45)
+colnames(cod_prob) <- c(48, 50, 51, 54, 55, 56, 65)
+qplot(1:142, `48`, data = aa_prob, geom = "point") + xlab("Codon site") +
+  ylab("Probability") + ggtitle("Ancestral node 48")
+
+```
+
+```{r asr50_cod_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 50 reconstructed using a codon substitution model.", cache=TRUE}
+
+qplot(1:142, `50`, data = aa_prob, geom = "point") + xlab("Codon site") +
+  ylab("Probability") + ggtitle("Ancestral node 50")
+
+```
+
+```{r asr51_cod_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 51 reconstructed using a codon substitution model.", cache=TRUE}
+
+qplot(1:142, `51`, data = aa_prob, geom = "point") + xlab("Codon site") +
+  ylab("Probability") + ggtitle("Ancestral node 51")
+
+```
+
+```{r asr54_cod_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 54 reconstructed using a codon substitution model.", cache=TRUE}
+
+qplot(1:142, `54`, data = aa_prob, geom = "point") + xlab("Codon site") +
+  ylab("Probability") + ggtitle("Ancestral node 54")
+
+```
+
+```{r asr55_cod_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 55 reconstructed using a codon substitution model.", cache=TRUE}
+
+qplot(1:142, `55`, data = aa_prob, geom = "point") + xlab("Codon site") +
+  ylab("Probability") + ggtitle("Ancestral node 55")
+
+```
+
+```{r asr56_cod_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 56 reconstructed using a codon substitution model.", cache=TRUE}
+
+qplot(1:142, `56`, data = aa_prob, geom = "point") + xlab("Codon site") +
+  ylab("Probability") + ggtitle("Ancestral node 56")
+
+```
+
+```{r asr65_cod_bpp, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Probabilities for each site of the ancestral node 65 reconstructed using a codon substitution model.", cache=TRUE}
+
+qplot(1:142, `65`, data = aa_prob, geom = "point") + xlab("Codon site") +
+  ylab("Probability") + ggtitle("Ancestral node 65")
+
+```
+
+\newpage
+
+Here, we will plot a MSA for each ancestral node separately to visualize the differences between the ancestors reconstructed through each method.  
+
+```{r msa_anc48, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="MSA showing the consensus sequences for the ancestral node 48 using the three different methods. Amino acids are coloured by chemical properties.", cache=TRUE}
+
+n48 <- readAAMultipleAlignment("Ancestral sequence reconstruction/n48.fasta",
+                               format = "fasta")
+ggmsa(n48, start = 1, end = 142, font = "helvetical",
+      color = "Chemistry_AA", custom_color = NULL, char_width = 0.9, 
+      none_bg = FALSE, by_conservation = FALSE, posHighligthed = NULL, 
+      seq_name = TRUE, border = NULL, consensus_views = TRUE, use_dot = FALSE,
+      disagreement = TRUE, ignore_gaps = FALSE, ref = NULL, 
+      show.legend = FALSE) + facet_msa(field = 50)
+
+```
+
+
+```{r msa_anc50, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="MSA showing the consensus sequences for the ancestral node 50 using the three different methods. Amino acids are coloured by chemical properties.", cache=TRUE}
+
+n50 <- readAAMultipleAlignment("Ancestral sequence reconstruction/n50.fasta",
+                               format = "fasta")
+ggmsa(n50, start = 1, end = 142, font = "helvetical",
+      color = "Chemistry_AA", custom_color = NULL, char_width = 0.9, 
+      none_bg = FALSE, by_conservation = FALSE, posHighligthed = NULL, 
+      seq_name = TRUE, border = NULL, consensus_views = TRUE, use_dot = FALSE,
+      disagreement = TRUE, ignore_gaps = FALSE, ref = NULL, 
+      show.legend = FALSE) + facet_msa(field = 50)
+
+```
+
+
+```{r msa_anc51, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="MSA showing the consensus sequences for the ancestral node 51 using the three different methods. Amino acids are coloured by chemical properties.", cache=TRUE}
+
+n51 <- readAAMultipleAlignment("Ancestral sequence reconstruction/n51.fasta",
+                               format = "fasta")
+ggmsa(n51, start = 1, end = 142, font = "helvetical",
+      color = "Chemistry_AA", custom_color = NULL, char_width = 0.9, 
+      none_bg = FALSE, by_conservation = FALSE, posHighligthed = NULL, 
+      seq_name = TRUE, border = NULL, consensus_views = TRUE, use_dot = FALSE,
+      disagreement = TRUE, ignore_gaps = FALSE, ref = NULL, 
+      show.legend = FALSE) + facet_msa(field = 50)
+
+```
+
+
+```{r msa_anc54, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="MSA showing the consensus sequences for the ancestral node 54 using the three different methods. Amino acids are coloured by chemical properties.", cache=TRUE}
+
+n54 <- readAAMultipleAlignment("Ancestral sequence reconstruction/n54.fasta",
+                               format = "fasta")
+ggmsa(n54, start = 1, end = 142, font = "helvetical",
+      color = "Chemistry_AA", custom_color = NULL, char_width = 0.9, 
+      none_bg = FALSE, by_conservation = FALSE, posHighligthed = NULL, 
+      seq_name = TRUE, border = NULL, consensus_views = TRUE, use_dot = FALSE,
+      disagreement = TRUE, ignore_gaps = FALSE, ref = NULL, 
+      show.legend = FALSE) + facet_msa(field = 50)
+
+```
+
+
+```{r msa_anc55, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="MSA showing the consensus sequences for the ancestral node 55 using the three different methods. Amino acids are coloured by chemical properties.", cache=TRUE}
+
+n55 <- readAAMultipleAlignment("Ancestral sequence reconstruction/n55.fasta",
+                               format = "fasta")
+ggmsa(n55, start = 1, end = 142, font = "helvetical",
+      color = "Chemistry_AA", custom_color = NULL, char_width = 0.9, 
+      none_bg = FALSE, by_conservation = FALSE, posHighligthed = NULL, 
+      seq_name = TRUE, border = NULL, consensus_views = TRUE, use_dot = FALSE,
+      disagreement = TRUE, ignore_gaps = FALSE, ref = NULL, 
+      show.legend = FALSE) + facet_msa(field = 50)
+
+```
+
+
+```{r msa_anc56, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="MSA showing the consensus sequences for the ancestral node 56 using the three different methods. Amino acids are coloured by chemical properties.", cache=TRUE}
+
+n56 <- readAAMultipleAlignment("Ancestral sequence reconstruction/n56.fasta",
+                               format = "fasta")
+ggmsa(n56, start = 1, end = 142, font = "helvetical",
+      color = "Chemistry_AA", custom_color = NULL, char_width = 0.9, 
+      none_bg = FALSE, by_conservation = FALSE, posHighligthed = NULL, 
+      seq_name = TRUE, border = NULL, consensus_views = TRUE, use_dot = FALSE,
+      disagreement = TRUE, ignore_gaps = FALSE, ref = NULL, 
+      show.legend = FALSE) + facet_msa(field = 50)
+
+```
+
+
+```{r msa_anc65, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="MSA showing the consensus sequences for the ancestral node 65 using the three different methods. Amino acids are coloured by chemical properties.", cache=TRUE}
+
+n65 <- readAAMultipleAlignment("Ancestral sequence reconstruction/n65.fasta",
+                               format = "fasta")
+ggmsa(n65, start = 1, end = 142, font = "helvetical",
+      color = "Chemistry_AA", custom_color = NULL, char_width = 0.9, 
+      none_bg = FALSE, by_conservation = FALSE, posHighligthed = NULL, 
+      seq_name = TRUE, border = NULL, consensus_views = TRUE, use_dot = FALSE,
+      disagreement = TRUE, ignore_gaps = FALSE, ref = NULL, 
+      show.legend = FALSE) + facet_msa(field = 50)
+
+```
+
+\newpage
+
+# Computational evolutionary biochemistry analyses
+
+The objective of the evolutionary biochemistry analyses is to unravel the historical and physical causes of the observed and inferred changes on the structure and global properties of the globins during the neofunctionalization process. Because we are interested on the structural aspects and properties of globins, we will use a computational approach that involves protein 3D structure prediction, estimating net surface charge from 3D structures, protein-protein docking, and binding energy estimation of protein complexes.
+
+## Protein 3D structure prediction and comparative analysis of selected GbA with the human Hba
+
+We used the I-TASSER server for protein 3D structure prediction [@Zhang2008; @Zhang2009a]. We used as input the 43 globin sequences plus the 7 ancestors times 3 different ASR approaches, summing up 64 globin 3D structures. We will analyze the 3D structures predicted by I-TASSER through the independent R package _Bio3D_ version 2.4-2 (http://thegrantlab.org/bio3d/) [@Skjaerven2014; @Grant2020; @Grant2006]. To visualize the 3D structures we used _PyMOL_ version 1.3 [@PyMOL].
+
+Because the _Rca_GbA_ is the only GbA-like protein that was characterized experimentally [@Maeda1982a], we chose it to start the structural analysis. Despite the shorter sequence of Rca_GbA (133 aa) than human $\alpha$-globin (141 aa without the initial methionine), the overall structures are very similar. We used the Bio3D package to perform a sequence based structural alignment and coordinate superposition and to calculate the root mean square deviation (RMSD).
+
+```{r structural_alignment_01, echo=TRUE, message=FALSE, warning=FALSE}
+
+library(bio3d)
+library(msa)
+file.path("D:", "Biblioteca", "R scripts", "Multiple Sequence Alignment", 
+"muscle3.8.31_i86win32.exe") -> fp.muscle
+human_Hba <- read.pdb("GbA_3D_structures/2dn1_Hba.pdb")
+Rca_GbA <- read.pdb("GbA_3D_structures/Rca_GbA.pdb")
+aln_01 <- struct.aln(human_Hba, Rca_GbA, exefile = fp.muscle)
+Rca_GbA$xyz <- aln_01$xyz
+write.pdb(Rca_GbA, "GbA_3D_structures/aln01_Rca_GbA.pdb")
+
+```
+
+We used PyMOL to visualize the superimposed structures. All the conserved residues present in $\alpha$-globins like the proximal and distal histidines and the Phe CD1 are present in the Rca_GbA structure. The seven $\alpha$-helices are present in Rca_GbA. However, the $\alpha$-helice F is shorter than in the human $\alpha$-globin. We also noted that other Phe is present downstream to Phe CD1 in the Rca_GbA and might also interact with the lateral chains of the heme group.
+
+![Sequence based structural alignment and coordinate superposition between human Hba (2DN1) in lightpink and Rca_GbA in lightblue. The heme group is colored with paleyellown and the oxygen molecule with bluewhite.](GbA_3D_structures/Images/Rca_GbA_i01.png){width=50%}  
+
+\newpage
+
+The Lle_HbGbA1 3D structure is very similar to the 3D structure of the human $\alpha$-globin and shows the same conserved residues near the heme group. Also, there is the same Phe adjacent to Phe CD1 as we observed in Rca_HbA.
+
+```{r structural_alignment_02, echo=TRUE, message=FALSE, warning=FALSE}
+
+Lle_HbGbA1 <- read.pdb("GbA_3D_structures/Lle_HbGbA1.pdb")
+aln_02 <- struct.aln(human_Hba, Lle_HbGbA1, exefile = fp.muscle)
+Lle_HbGbA1$xyz <- aln_02$xyz
+write.pdb(Lle_HbGbA1, "GbA_3D_structures/aln02_Lle_HbGbA1.pdb")
+
+```
+
+![Sequence based structural alignment and coordinate superposition between human Hba (2DN1) in lightpink and Lle_HbGbA1 in palegreen. The heme group is colored with paleyellown and the oxygen molecule with bluewhite.](GbA_3D_structures/Images/Lle_HbGbA1_i01.png){width=50%}
+
+\newpage
+
+Now, we need to compare the 3D structure of a GbA from the Bufonidae-specific GbA-II clade. We chose the Bbu_GbA_13 because it diverged first in the GbA-II clade. The conserved residues near the heme group are present, but in the Bbu_GbA_13 there isn't a second Phe residue close to Phe CD1.
+
+```{r structural_alignment_03, echo=TRUE, message=FALSE, warning=FALSE}
+
+Bbu_GbA_13 <- read.pdb("GbA_3D_structures/Bbu_GbA_13.pdb")
+aln_03 <- struct.aln(human_Hba, Bbu_GbA_13, exefile = fp.muscle)
+Bbu_GbA_13$xyz <- aln_03$xyz
+write.pdb(Bbu_GbA_13, "GbA_3D_structures/aln03_Bbu_GbA_13.pdb")
+
+```
+
+![Sequence based structural alignment and coordinate superposition between human Hba (2DN1) in lightpink and Bbu_GbA_13 in lightorange. The heme group is colored with paleyellown and the oxygen molecule with bluewhite.](GbA_3D_structures/Images/Bbu_GbA_13_i01.png){width=50%}
+
+\newpage
+
+The comparison of the 3D structures of the Rca_GbA (representing the GbA-I clade), Lle_HbGbA1 (representing the Pelobatoidea GbA clade), and the Bbu_GbA_13 (representing the GbA-II clade) shows that, despite the great amino acid sequence divergence as well as the presence of deletions in different regions of the alignment, the globins' tertiary structure is conserved. It is already known that globins can accommodate changes in the amino acid sequence while conserving the 3D structure by dissipating the rigid-body movements of the helices throughout the turn regions [@Lesk1980a]. So, if the GbA clade really diverged functionally from the precursor $\alpha$-globin, the divergence was probably not due to major changes in tertiary structure.   
+
+## Net surface charge evolution
+
+Since the tertiary structure seems to be conserved, now we will analyze global properties of the GbA evolution along the divergence from the $\alpha$-globin precursor. As the putative function suggested for the GbA of _Rana catesbeiana_ is a myoglobin-like function [@Maeda1982a] due to its expression in heart muscle, we also suggested a putative Mb-like function for all GbA-like genes we found in Pelobatoidea and Neobatrachia anurans [@Queiroz2021].
+
+We used the APBS-PDB2PQR software suite web server (https://server.poissonboltzmann.org/) [@Jurrus2018] to model the electrostatics of the globins using the AMBER force field at the pH values 6.0, 6.5, and 7.0. We used PyMOL to calculate the sum of partial charges for each protein.
+
+The values are reported below. We will use them later to plot the NSC in the ML topology.
+
+```{r remedy063, echo=FALSE, message=FALSE, warning=FALSE}
+
+library(pander)
+# Net surface charge of the modeled globins
+#
+# Table of net surface charges
+# Net surface charge (NSC) was obtained using the function sum_partial_charges
+# in PyMOL. The structures modeled in the I-TASSER server were pre-processed
+# in the APBS/PDB2PQR server before compute NSC.
+# NSC was calculated using pH 6.0, 6.5, and 7.0.
+# Creating NSC pH 6.0 vector
+NSC_pH_6.0 <- c(0, -2, 0, -2, 0, -1, 1, 0, 0, -1, 1, -1, 0, 1, 0,
+                -1, -2, -1, -2, -1, -1, 0, -3, -1, 0, -2, -1, -3, -1, -1, -1,
+                -1, 1, 2, 1, 6, 1, 0, 8, 6, 1, -1, 3)
+# Creating NSC pH 6.5 vector
+NSC_pH_6.5 <- c(-1, -2, -1, -5, -2, -2, -1, -2, -1, -3, 1, -2, 0,
+                0, -2, -3, -4, -4, -4, -4, -2, -3, -3, -3, -3, -5, -1, -4, -1, 
+                -4, -3, -5, 1, 2, -1, 2, -2, -2, 3, 4, 0, -1, -1)
+# Creating NSC pH 7.0 vector
+NSC_pH_7.0 <- c(-2, -3, -1, -6, -4, -3, -1, -4, -3, -3, 0, -2, -2, 
+                -1, -2, -6, -6, -5, -5, -4, -3, -5, -3, -4, -5, -7, -2, -5, -2, 
+                -7, -5, -7, -1, 1, -3, 2, -2, -3, 0, 1, -2, -3, -1)
+# Creating the data frame
+Net_Surface_Charge <- data.frame(NSC_pH_6.0, NSC_pH_6.5, NSC_pH_7.0)
+# Name the rows using sequence labels
+row.names(Net_Surface_Charge) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA",
+                                   "Rma_GbA_01", "Rma_GbA_03", "Rma_GbA_04",
+                                   "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02", 
+                                   "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", 
+                                   "Oto_GbA", "Rte_GbA", "Rar_GbA_01",
+                                   "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02",
+                                   "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06",
+                                   "Bbu_GbA_07", "Bbu_GbA_08", "Bbu_GbA_10",
+                                   "Bbu_GbA_11", "Bbu_GbA_12", "Rpi_GbA",
+                                   "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20",
+                                   "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07",
+                                   "Mun_Hba_01", "Xtr_Hba_01", "Xtr_Hba_02",
+                                   "Xtr_Hba_08", "Rca_Hba_01", "Rca_Hba_03",
+                                   "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05", 
+                                   "Ame_Hba_02")
+pander(Net_Surface_Charge)
+# Buffer capacity
+# buc <- c(abs(Net_Surface_Charge$NSC_pH_7.0 - Net_Surface_Charge$NSC_pH_6.0))
+# names(buc) <- row.names(Net_Surface_Charge)
+# buc
+#
+# Table of the NSC for reconstructed ancestors
+# Ancestors inferred by aa substitution model
+aa_NSC_pH_6.0 <- c(0, -2, 0, -6, -4, 0, -2)
+aa_NSC_pH_6.5 <- c(-3, -3, -2, -7, -6, -2, -4)
+aa_NSC_pH_7.0 <- c(-5, -4, -5, -8, -8, -4, -6)
+aa_NSC <- data.frame(aa_NSC_pH_6.0, aa_NSC_pH_6.5, aa_NSC_pH_7.0)
+row.names(aa_NSC) <- c("aa_n48", "aa_n50", "aa_n51", "aa_n54", "aa_n55",
+                       "aa_n56", "aa_n65")
+pander(aa_NSC)
+# Buffer capacity
+# aa_buc <- c(abs(aa_NSC_pH_7.0 - aa_NSC_pH_6.0))
+# aa_buc
+# Ancestors inferred by nucleotide substitution model
+dna_NSC_pH_6.0 <- c(-2, -4, -4, -6, -2, 0, -2)
+dna_NSC_pH_6.5 <- c(-3, -5, -6, -7, -4, -1, -5)
+dna_NSC_pH_7.0 <- c(-4, -6, -7, -9, -4, -2, -6)
+dna_NSC <- data.frame(dna_NSC_pH_6.0, dna_NSC_pH_6.5, dna_NSC_pH_7.0)
+row.names(dna_NSC) <- c("dna_n48", "dna_n50", "dna_n51", "dna_n54", "dna_n55",
+                        "dna_n56", "dna_n65")
+pander(dna_NSC)
+# Buffer capacity
+# dna_buc <- c(abs(dna_NSC_pH_7.0 - dna_NSC_pH_6.0))
+# dna_buc
+# Ancestors inferred by codon substitution model
+cod_NSC_pH_6.0 <- c(-1, -4, -4, -8, -4, -1, -3)
+cod_NSC_pH_6.5 <- c(-4, -5, -5, -8, -6, -2, -5)
+cod_NSC_pH_7.0 <- c(-6, -7, -7, -10, -7, -3, -7)
+cod_NSC <- data.frame(cod_NSC_pH_6.0, cod_NSC_pH_6.5, cod_NSC_pH_7.0)
+row.names(cod_NSC) <- c("cod_n48", "cod_n50", "cod_n51", "cod_n54", "cod_n55",
+                        "cod_n56", "cod_n65")
+pander(cod_NSC)
+# Buffer capacity
+# cod_buc <- c(abs(cod_NSC_pH_7.0 - cod_NSC_pH_6.0))
+# cod_buc
+
+```
+
+Now, we will plot the NSC in the ML topology using functions of the R package _phytools_ [@Revell2012; @Revell2013]. The mapping of the states at internal nodes is performed according to equation 2 from Felsenstein [@Felsenstein1985].  
+
+```{r plot_NSC_01, echo=TRUE, message=FALSE, warning=FALSE, fig.height=8.0, fig.cap="Maximum likelihood phylogram with NSC of the proteins mapped as a continuous trait. The NSC was calculated in pH 6.0. Ancestral states were interpolated with the Felsenstein's equation mentioned above. We supplied ancestral states for the nodes whose ancestrals we reconstructed previously using an amino acid substitution model.", cache=TRUE}
+
+library(phytools)
+library(viridis)
+t1 <- read.newick(file = "IQ-TREE_GbA_consensus_tree_26-07-2021.nwk")
+t1 <- root(t1, node = 45, resolve.root = TRUE)
+t1 <- rotateNodes(t1, nodes = c(45, 45, 54, 56, 57, 58, 60, 61, 65, 66))
+is.rooted(t1)
+# Creating a numerical vector of phenotypic trait values
+x <- c(0, -2, 0, -2, 0, -1, 1, 0, 0, -1, 1, -1, 0, 1, 0, -1, -2, -1, -2, -1,
+       -1, 0, -3, -1, 0, -2, -1, -3, -1, -1, -1, -1, 1, 2, 1, 6, 1, 0, 8, 6,
+       1, -1, 3)
+names(x) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA", "Rma_GbA_01", "Rma_GbA_03",
+              "Rma_GbA_04", "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02",
+              "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", "Oto_GbA", "Rte_GbA",
+              "Rar_GbA_01", "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02",
+              "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06", "Bbu_GbA_07",
+              "Bbu_GbA_08", "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12",
+              "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20",
+              "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07", "Mun_Hba_01",
+              "Xtr_Hba_01", "Xtr_Hba_02", "Xtr_Hba_08", "Rca_Hba_01",
+              "Rca_Hba_03", "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05",
+              "Ame_Hba_02")
+ancGbA <- c(0, -2, 0, -6, -4, 0, -2)
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = c(min(-6), max(8)),
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = turbo(15, direction = -1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1),
+                        Ntip(t1.contMap$tree)), legend = FALSE,
+     method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.35, t1.contMap$cols, title="NSC, pH = 6.0",
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+\newpage
+
+The following figures will be plotted using the same script, but we will hide the code.
+
+```{r plot_NSC_02, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with NSC of the proteins mapped as a continuous trait. The NSC was calculated in pH 6.5. Ancestral states were interpolated with the Felsenstein's equation mentioned above. We supplied ancestral states for the nodes whose ancestrals we reconstructed previously using an amino acid substitution model.", cache=TRUE}
+
+x <- c(-1, -2, -1, -5, -2, -2, -1, -2, -1, -3, 1, -2, 0, 0, -2, -3, -4, -4,
+       -4, -4, -2, -3, -3, -3, -3, -5, -1, -4, -1, -4, -3, -5, 1, 2, -1, 2,
+       -2, -2, 3, 4, 0, -1, -1)
+names(x) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA", "Rma_GbA_01", "Rma_GbA_03",
+              "Rma_GbA_04", "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02",
+              "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", "Oto_GbA", "Rte_GbA",
+              "Rar_GbA_01", "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02",
+              "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06", "Bbu_GbA_07",
+              "Bbu_GbA_08", "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12",
+              "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20",
+              "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07", "Mun_Hba_01",
+              "Xtr_Hba_01", "Xtr_Hba_02", "Xtr_Hba_08", "Rca_Hba_01",
+              "Rca_Hba_03", "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05",
+              "Ame_Hba_02")
+ancGbA <- c(-3, -3, -2, -7, -6, -2, -4)
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = c(min(-7), max(4)),
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = turbo(12, direction = -1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.35, t1.contMap$cols, title="NSC, pH = 6.5",
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+
+```{r plot_NSC_03, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with NSC of the proteins mapped as a continuous trait. The NSC was calculated in pH 7.0. Ancestral states were interpolated with the Felsenstein's equation mentioned above. We supplied ancestral states for the nodes whose ancestrals we reconstructed previously using an amino acid substitution model.", cache=TRUE}
+
+x <- c(-2, -3, -1, -6, -4, -3, -1, -4, -3, -3, 0, -2, -2, -1, -2, -6, -6, -5,
+       -5, -4, -3, -5, -3, -4, -5, -7, -2, -5, -2, -7, -5, -7, -1, 1, -3, 2,
+       -2, -3, 0, 1, -2, -3, -1)
+names(x) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA", "Rma_GbA_01", "Rma_GbA_03",
+              "Rma_GbA_04", "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02",
+              "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", "Oto_GbA", "Rte_GbA",
+              "Rar_GbA_01", "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02",
+              "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06", "Bbu_GbA_07",
+              "Bbu_GbA_08", "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12",
+              "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20",
+              "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07", "Mun_Hba_01",
+              "Xtr_Hba_01", "Xtr_Hba_02", "Xtr_Hba_08", "Rca_Hba_01",
+              "Rca_Hba_03", "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05",
+              "Ame_Hba_02")
+ancGbA <- c(-5, -4, -5, -8, -8, -4, -6)
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = c(min(-8), max(2)),
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = turbo(11, direction = -1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.35, t1.contMap$cols, title="NSC, pH = 7.0",
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+\newpage
+
+Comparing the three figures presented previously, we can observe that the GbA clade possesses proteins more negatively charged, specially in pH 6.0. As the pH augmented, all the proteins became negatively charged.
+
+```{r plot_NSC_04, echo=FALSE, message=FALSE, warning=FALSE, fig.height=8.0, fig.cap="Maximum likelihood phylogram with NSC of the proteins mapped as a continuous trait. The NSC was calculated in pH 6.0. Ancestral states were interpolated with the Felsenstein's equation mentioned above. We supplied ancestral states for the nodes whose ancestrals we reconstructed previously using a nucleotide substitution model.", cache=TRUE}
+
+# Creating a numerical vector of phenotypic trait values
+x <- c(0, -2, 0, -2, 0, -1, 1, 0, 0, -1, 1, -1, 0, 1, 0, -1, -2, -1, -2, -1,
+       -1, 0, -3, -1, 0, -2, -1, -3, -1, -1, -1, -1, 1, 2, 1, 6, 1, 0, 8, 6,
+       1, -1, 3)
+names(x) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA", "Rma_GbA_01", "Rma_GbA_03",
+              "Rma_GbA_04", "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02",
+              "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", "Oto_GbA", "Rte_GbA",
+              "Rar_GbA_01", "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02",
+              "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06", "Bbu_GbA_07",
+              "Bbu_GbA_08", "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12",
+              "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20",
+              "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07", "Mun_Hba_01",
+              "Xtr_Hba_01", "Xtr_Hba_02", "Xtr_Hba_08", "Rca_Hba_01",
+              "Rca_Hba_03", "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05",
+              "Ame_Hba_02")
+ancGbA <- c(-2, -4, -4, -6, -2, 0, -2)
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = c(min(-6), max(8)),
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = turbo(15, direction = -1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1),
+                        Ntip(t1.contMap$tree)), legend = FALSE,
+     method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.35, t1.contMap$cols, title="NSC, pH = 6.0",
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+
+```{r plot_NSC_05, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with NSC of the proteins mapped as a continuous trait. The NSC was calculated in pH 6.5. Ancestral states were interpolated with the Felsenstein's equation mentioned above. We supplied ancestral states for the nodes whose ancestrals we reconstructed previously using a nucleotide substitution model.", cache=TRUE}
+
+x <- c(-1, -2, -1, -5, -2, -2, -1, -2, -1, -3, 1, -2, 0, 0, -2, -3, -4, -4,
+       -4, -4, -2, -3, -3, -3, -3, -5, -1, -4, -1, -4, -3, -5, 1, 2, -1, 2,
+       -2, -2, 3, 4, 0, -1, -1)
+names(x) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA", "Rma_GbA_01", "Rma_GbA_03",
+              "Rma_GbA_04", "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02",
+              "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", "Oto_GbA", "Rte_GbA",
+              "Rar_GbA_01", "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02",
+              "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06", "Bbu_GbA_07",
+              "Bbu_GbA_08", "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12",
+              "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20",
+              "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07", "Mun_Hba_01",
+              "Xtr_Hba_01", "Xtr_Hba_02", "Xtr_Hba_08", "Rca_Hba_01",
+              "Rca_Hba_03", "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05",
+              "Ame_Hba_02")
+ancGbA <- c(-3, -5, -6, -7, -4, -1, -5)
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = c(min(-7), max(4)),
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = turbo(12, direction = -1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.35, t1.contMap$cols, title="NSC, pH = 6.5",
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+
+```{r plot_NSC_06, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with NSC of the proteins mapped as a continuous trait. The NSC was calculated in pH 7.0. Ancestral states were interpolated with the Felsenstein's equation mentioned above. We supplied ancestral states for the nodes whose ancestrals we reconstructed previously using a nucleotide substitution model.", cache=TRUE}
+
+x <- c(-2, -3, -1, -6, -4, -3, -1, -4, -3, -3, 0, -2, -2, -1, -2, -6, -6, -5,
+       -5, -4, -3, -5, -3, -4, -5, -7, -2, -5, -2, -7, -5, -7, -1, 1, -3, 2,
+       -2, -3, 0, 1, -2, -3, -1)
+names(x) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA", "Rma_GbA_01", "Rma_GbA_03",
+              "Rma_GbA_04", "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02",
+              "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", "Oto_GbA", "Rte_GbA",
+              "Rar_GbA_01", "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02",
+              "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06", "Bbu_GbA_07",
+              "Bbu_GbA_08", "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12",
+              "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20",
+              "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07", "Mun_Hba_01",
+              "Xtr_Hba_01", "Xtr_Hba_02", "Xtr_Hba_08", "Rca_Hba_01",
+              "Rca_Hba_03", "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05",
+              "Ame_Hba_02")
+ancGbA <- c(-4, -6, -7, -9, -4, -2, -6)
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = c(min(-9), max(2)),
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = turbo(12, direction = -1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.35, t1.contMap$cols, title="NSC, pH = 7.0",
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+
+```{r plot_NSC_07, echo=FALSE, message=FALSE, warning=FALSE, fig.height=8.0, fig.cap="Maximum likelihood phylogram with NSC of the proteins mapped as a continuous trait. The NSC was calculated in pH 6.0. Ancestral states were interpolated with the Felsenstein's equation mentioned above. We supplied ancestral states for the nodes whose ancestrals we reconstructed previously using a codon substitution model.", cache=TRUE}
+
+# Creating a numerical vector of phenotypic trait values
+x <- c(0, -2, 0, -2, 0, -1, 1, 0, 0, -1, 1, -1, 0, 1, 0, -1, -2, -1, -2, -1,
+       -1, 0, -3, -1, 0, -2, -1, -3, -1, -1, -1, -1, 1, 2, 1, 6, 1, 0, 8, 6,
+       1, -1, 3)
+names(x) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA", "Rma_GbA_01", "Rma_GbA_03",
+              "Rma_GbA_04", "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02",
+              "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", "Oto_GbA", "Rte_GbA",
+              "Rar_GbA_01", "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02",
+              "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06", "Bbu_GbA_07",
+              "Bbu_GbA_08", "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12",
+              "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20",
+              "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07", "Mun_Hba_01",
+              "Xtr_Hba_01", "Xtr_Hba_02", "Xtr_Hba_08", "Rca_Hba_01",
+              "Rca_Hba_03", "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05",
+              "Ame_Hba_02")
+ancGbA <- c(-1, -4, -4, -8, -4, -1, -3)
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = c(min(-8), max(8)),
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = turbo(17, direction = -1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1),
+                        Ntip(t1.contMap$tree)), legend = FALSE,
+     method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.35, t1.contMap$cols, title="NSC, pH = 6.0",
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+
+```{r plot_NSC_08, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with NSC of the proteins mapped as a continuous trait. The NSC was calculated in pH 6.5. Ancestral states were interpolated with the Felsenstein's equation mentioned above. We supplied ancestral states for the nodes whose ancestrals we reconstructed previously using a codon substitution model.", cache=TRUE}
+
+x <- c(-1, -2, -1, -5, -2, -2, -1, -2, -1, -3, 1, -2, 0, 0, -2, -3, -4, -4,
+       -4, -4, -2, -3, -3, -3, -3, -5, -1, -4, -1, -4, -3, -5, 1, 2, -1, 2,
+       -2, -2, 3, 4, 0, -1, -1)
+names(x) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA", "Rma_GbA_01", "Rma_GbA_03",
+              "Rma_GbA_04", "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02",
+              "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", "Oto_GbA", "Rte_GbA",
+              "Rar_GbA_01", "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02",
+              "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06", "Bbu_GbA_07",
+              "Bbu_GbA_08", "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12",
+              "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20",
+              "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07", "Mun_Hba_01",
+              "Xtr_Hba_01", "Xtr_Hba_02", "Xtr_Hba_08", "Rca_Hba_01",
+              "Rca_Hba_03", "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05",
+              "Ame_Hba_02")
+ancGbA <- c(-4, -5, -5, -8, -6, -2, -5)
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = c(min(-8), max(4)),
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = turbo(13, direction = -1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.35, t1.contMap$cols, title="NSC, pH = 6.5",
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+
+```{r plot_NSC_09, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with NSC of the proteins mapped as a continuous trait. The NSC was calculated in pH 7.0. Ancestral states were interpolated with the Felsenstein's equation mentioned above. We supplied ancestral states for the nodes whose ancestrals we reconstructed previously using a codon substitution model.", cache=TRUE}
+
+x <- c(-2, -3, -1, -6, -4, -3, -1, -4, -3, -3, 0, -2, -2, -1, -2, -6, -6, -5,
+       -5, -4, -3, -5, -3, -4, -5, -7, -2, -5, -2, -7, -5, -7, -1, 1, -3, 2,
+       -2, -3, 0, 1, -2, -3, -1)
+names(x) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA", "Rma_GbA_01", "Rma_GbA_03",
+              "Rma_GbA_04", "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02",
+              "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", "Oto_GbA", "Rte_GbA",
+              "Rar_GbA_01", "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02",
+              "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06", "Bbu_GbA_07",
+              "Bbu_GbA_08", "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12",
+              "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20",
+              "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07", "Mun_Hba_01",
+              "Xtr_Hba_01", "Xtr_Hba_02", "Xtr_Hba_08", "Rca_Hba_01",
+              "Rca_Hba_03", "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05",
+              "Ame_Hba_02")
+ancGbA <- c(-6, -7, -7, -10, -7, -3, -7)
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = c(min(-10), max(2)),
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = turbo(13, direction = -1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.35, t1.contMap$cols, title="NSC, pH = 7.0",
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+\newpage
+
+<!-- Now, we will plot the approximate value of buffer capacity for each protein in the pH range from 6.0 to 7.0 to see whether there is an apparent trend with titrable groups on GbA clade.   -->
+
+<!-- ```{r plot_buc_01, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with (approximate) buffer capacity of the proteins mapped as a continuous trait. The buffer capacity was calculated from pH 6.0 to 7.0. Ancestral states were interpolated with the Felsenstein's equation mentioned above. We supplied ancestral states for the nodes whose ancestrals we reconstructed previously using an amino acid substitution model.", cache=TRUE} -->
+
+<!-- x <- buc -->
+<!-- names(x) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA", "Rma_GbA_01", "Rma_GbA_03", -->
+<!--               "Rma_GbA_04", "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02", -->
+<!--               "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", "Oto_GbA", "Rte_GbA", -->
+<!--               "Rar_GbA_01", "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02", -->
+<!--               "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06", "Bbu_GbA_07", -->
+<!--               "Bbu_GbA_08", "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12", -->
+<!--               "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20", -->
+<!--               "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07", "Mun_Hba_01", -->
+<!--               "Xtr_Hba_01", "Xtr_Hba_02", "Xtr_Hba_08", "Rca_Hba_01", -->
+<!--               "Rca_Hba_03", "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05", -->
+<!--               "Ame_Hba_02") -->
+<!-- ancGbA <- aa_buc -->
+<!-- names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65") -->
+<!-- # Plotting gene tree with net surface charges at the tips and specified nodes -->
+<!-- t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL, -->
+<!--                       lwd = 4, legend = FALSE, lims = NULL, -->
+<!--                       outline = TRUE, sig = 3, type = "phylogram", -->
+<!--                       direction = "rightward", plot = FALSE, -->
+<!--                       method = "user", anc.states = ancGbA) -->
+<!-- t1.contMap <- setMap(t1.contMap, colors = mako(9)) -->
+<!-- plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA) -->
+<!-- add.color.bar(0.40, t1.contMap$cols, title="buffer capacity", -->
+<!--               lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0, -->
+<!--               y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="") -->
+
+<!-- ``` -->
+
+
+<!-- ```{r plot_buc_02, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with (approximate) buffer capacity of the proteins mapped as a continuous trait. The buffer capacity was calculated from pH 6.0 to 7.0. Ancestral states were interpolated with the Felsenstein's equation mentioned above. We supplied ancestral states for the nodes whose ancestrals we reconstructed previously using a nucleotide substitution model.", cache=TRUE} -->
+
+<!-- x <- buc -->
+<!-- names(x) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA", "Rma_GbA_01", "Rma_GbA_03", -->
+<!--               "Rma_GbA_04", "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02", -->
+<!--               "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", "Oto_GbA", "Rte_GbA", -->
+<!--               "Rar_GbA_01", "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02", -->
+<!--               "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06", "Bbu_GbA_07", -->
+<!--               "Bbu_GbA_08", "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12", -->
+<!--               "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20", -->
+<!--               "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07", "Mun_Hba_01", -->
+<!--               "Xtr_Hba_01", "Xtr_Hba_02", "Xtr_Hba_08", "Rca_Hba_01", -->
+<!--               "Rca_Hba_03", "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05", -->
+<!--               "Ame_Hba_02") -->
+<!-- ancGbA <- dna_buc -->
+<!-- names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65") -->
+<!-- # Plotting gene tree with net surface charges at the tips and specified nodes -->
+<!-- t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL, -->
+<!--                       lwd = 4, legend = FALSE, lims = NULL, -->
+<!--                       outline = TRUE, sig = 3, type = "phylogram", -->
+<!--                       direction = "rightward", plot = FALSE, -->
+<!--                       method = "user", anc.states = ancGbA) -->
+<!-- t1.contMap <- setMap(t1.contMap, colors = mako(9)) -->
+<!-- plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA) -->
+<!-- add.color.bar(0.40, t1.contMap$cols, title="buffer capacity", -->
+<!--               lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0, -->
+<!--               y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="") -->
+
+<!-- ``` -->
+
+
+<!-- ```{r plot_buc_03, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with (approximate) buffer capacity of the proteins mapped as a continuous trait. The buffer capacity was calculated from pH 6.0 to 7.0. Ancestral states were interpolated with the Felsenstein's equation mentioned above. We supplied ancestral states for the nodes whose ancestrals we reconstructed previously using a codon substitution model.", cache=TRUE} -->
+
+<!-- x <- buc -->
+<!-- names(x) <- c("Npa_GbA", "Pad_GbA", "Rca_GbA", "Rma_GbA_01", "Rma_GbA_03", -->
+<!--               "Rma_GbA_04", "Rma_GbA_05", "Rma_GbA_09", "Rma_GbA_02", -->
+<!--               "Opu_GbA", "Lle_HbGbA1", "Mfi_GbA", "Oto_GbA", "Rte_GbA", -->
+<!--               "Rar_GbA_01", "Rar_GbA_02","Bbu_GbA_01", "Bbu_GbA_02", -->
+<!--               "Bbu_GbA_03", "Bbu_GbA_04", "Bbu_GbA_06", "Bbu_GbA_07", -->
+<!--               "Bbu_GbA_08", "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12", -->
+<!--               "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_19", "Bbu_GbA_20", -->
+<!--               "Bbu_GbA_21", "Bbu_GbA_22", "Ame_Hba_07", "Mun_Hba_01", -->
+<!--               "Xtr_Hba_01", "Xtr_Hba_02", "Xtr_Hba_08", "Rca_Hba_01", -->
+<!--               "Rca_Hba_03", "Rca_Hba_06", "Rma_Hba_01", "Npa_Hba_05", -->
+<!--               "Ame_Hba_02") -->
+<!-- ancGbA <- cod_buc -->
+<!-- names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65") -->
+<!-- # Plotting gene tree with net surface charges at the tips and specified nodes -->
+<!-- t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL, -->
+<!--                       lwd = 4, legend = FALSE, lims = NULL, -->
+<!--                       outline = TRUE, sig = 3, type = "phylogram", -->
+<!--                       direction = "rightward", plot = FALSE, -->
+<!--                       method = "user", anc.states = ancGbA) -->
+<!-- t1.contMap <- setMap(t1.contMap, colors = mako(9)) -->
+<!-- plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA) -->
+<!-- add.color.bar(0.40, t1.contMap$cols, title="buffer capacity", -->
+<!--               lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0, -->
+<!--               y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="") -->
+
+<!-- ``` -->
+
+<!-- \newpage -->
+
+### Modeling rate shifts of net surface charge evolution
+
+We used the Bayesian Markov Chain Monte Carlo approach implemented on the R package _phytools_ to estimate evolutionary rates and the shift point between rates of the net surface charge and the putative buffer capacity mapped previously on the trees. The algorithm uses only tip values and fits the data on the tree through Brownian motion [@Revell2012].  
+
+We used the script bellow to perform the analysis.
+
+```{r rate_shift_nsc, eval=FALSE, include=TRUE}
+
+NSC_rate_shift_1 <- evol.rate.mcmc(t1, Net_Surface_Charge$NSC_pH_6.0,
+                                   ngen = 1e+05,
+                                   control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                  5.0,0.1, 0.05, 1000, 10))
+NSC_rate_shift_2 <- evol.rate.mcmc(t1, Net_Surface_Charge$NSC_pH_6.5, 
+                                   ngen = 1e+05,
+                                   control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                  5.0, 0.1, 0.05, 1000, 10))
+NSC_rate_shift_3 <- evol.rate.mcmc(t1, Net_Surface_Charge$NSC_pH_7.0,
+                                   ngen = 1e+05,
+                                   control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                  5.0, 0.1, 0.05, 1000, 10))
+buc_rate_shift <- evol.rate.mcmc(t1, buc, ngen = 1e+05,
+                                 control = list(1.0, 10.0, 0.0, 0.5, 1.0, 5.0,
+                                                0.1, 0.05, 1000, 10))
+obj1 <- summary(NSC_rate_shift_1)
+obj1
+obj2 <- summary(NSC_rate_shift_2)
+obj2
+obj3 <- summary(NSC_rate_shift_3)
+obj3
+obj4 <- summary(buc_rate_shift)
+obj4
+plot(obj1,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj1, type = "min.split")
+plot(obj2,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj2, type = "min.split")
+plot(obj3,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj3, type = "min.split")
+plot(obj4,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj4, type = "min.split")
+save(obj1, obj2, obj3, obj4, file = "nsc_rate_shifts.RDa")
+
+```
+
+```{r load_rate_shift_nsc, include=FALSE}
+
+load("nsc_rate_shifts.RDa")
+
+```
+
+In all the analyses the shift point in the posterior set (burnin = 20%) is found along the branch leading to node 65, the last common ancestor of the GbA-II clade. Basyesian posterior probabilities are `r obj1$edge.prob[["65"]]`, `r obj2$edge.prob[["65"]]`, `r obj3$edge.prob[["65"]]`, and `r obj4$edge.prob[["65"]]`, respectively. Because this clade possesses multiple paralogs from _Bufo bufo_ and _Rhinella marina_, we think they are possibly biasing the analysis. So, we decided to exclude most of the paralogs, as we have done before in the molecular evolution analysis, and maintain only the less divergent paralogs of the GbA-II clade for each Bufonidae species. We used the same gene tree topology after excluding the multiple paralogs and we estimated branch lengths through the baseML algorithm in PAML software using the K80 model of nucleotide substitution plus a $\Gamma$ distribution to model different rates between sites using five discrete categories. The tree with the new internal node numbers is shown bellow.  
+
+```{r reduced_ML_tree, echo=TRUE, message=FALSE, warning=FALSE, fig.height=10, fig.width=8, fig.cap="Gene tree with the reduced GbA-II dataset showing internal node numbers. The equivalent nodes we used for ancestral sequence reconstruction are now: 28, 32, 33, 36, 37, 38, and 47.", cache=TRUE}
+
+t2 <- read.newick(file = "baseML_tree_06-11-2021.nwk")
+t2 <- root(t2, node = 27, resolve.root = TRUE)
+t2 <- rotateNodes(t2, nodes = c(26, 34))
+is.rooted(t2)
+plot(t2)
+nodelabels(bg="white")
+
+```
+
+\newpage
+
+We performed a new analysis of rate shift with the reduced data set using the script bellow.
+
+```{r rate_shift_nsc_25, eval=FALSE, include=TRUE}
+
+nsc25 <- Net_Surface_Charge[-c(4:5, 7:9, 17:26, 30:32), ]
+buc25 <- buc[-c(4:5, 7:9, 17:26, 30:32)]
+nsc25_rate_shift_1 <- evol.rate.mcmc(t2, nsc25$NSC_pH_6.0,
+                                   ngen = 1e+05,
+                                   control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                  5.0,0.1, 0.05, 1000, 10))
+nsc25_rate_shift_2 <- evol.rate.mcmc(t2, nsc25$NSC_pH_6.5, 
+                                   ngen = 1e+05,
+                                   control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                  5.0, 0.1, 0.05, 1000, 10))
+nsc25_rate_shift_3 <- evol.rate.mcmc(t2, nsc25$NSC_pH_7.0,
+                                   ngen = 1e+05,
+                                   control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                  5.0, 0.1, 0.05, 1000, 10))
+buc25_rate_shift <- evol.rate.mcmc(t2, buc, ngen = 1e+05,
+                                   control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                  5.0, 0.1, 0.05, 1000, 10))
+obj1_25 <- summary(nsc25_rate_shift_1)
+obj1_25
+obj2_25 <- summary(nsc25_rate_shift_2)
+obj2_25
+obj3_25 <- summary(nsc25_rate_shift_3)
+obj3_25
+obj4_25 <- summary(buc25_rate_shift)
+obj4_25
+plot(obj1_25,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj1_25, type = "min.split")
+plot(obj2_25,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj2_25, type = "min.split")
+plot(obj3_25,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj3_25, type = "min.split")
+plot(obj4_25,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj4_25, type = "min.split")
+save(obj1_25, obj2_25, obj3_25, obj4_25, file = "nsc25_rate_shifts.RDa")
+
+```
+
+```{r load_rate_shift_nsc_25, include=FALSE}
+
+load("nsc25_rate_shifts.RDa")
+
+```
+
+The analysis above suggested that rate shifts occurred along the branches leading to nodes 37, 37, 36, and 47, respectively. These branches are equivalent to branches 55, 55, 54, and 65 of the full globin data set, respectively. Nevertheless, the posterior probabilities obtained for the rate shifts of the reduced data set above were lower (`r obj1_25$edge.prob[["37"]]`, `r obj2_25$edge.prob[["37"]]`, `r obj3_25$edge.prob[["36"]]`, and `r obj4_25$edge.prob[["47"]]`, respectively) and most dispersed along different branches, while the posterior probabilities for the full data set were mainly centered at the branch 65 (equivalent to 47 in the reduced data set).  
+
+## Loss of the homodimeric state
+
+The quaternary structure of the tetrametic Hb of jawed vertebrates is also described as a dimer of protomers $\alpha$$\beta$. When isolated, the $\alpha$ and $\beta$ chains of human Hb can assembly into homodimers and homotetramers, respectively [@Valdes1977]. The complex architecture of Hb evolved after the event of duplication that gave rise to the $\alpha$ and $\beta$ chains in the stem lineage of jawed vertebrates [@Goodman1975]. But first, an inter-subunit interface arose at the $\alpha$/$\beta$-globin ancestor that was then capable to form homodimers. Following the duplication event, the separated $\alpha$- and $\beta$-globin ancestors could form heterodimers and, finally, a second interface arose at the $\beta$-globin chain that thenceforth was capable to form the heterotetramer [@Pillai2020]. Because the GbA clade evolved from an $\alpha$-globin ancestor and the GbA-I type found in the heart of _Rana catesbeiana_ is a monomeric protein [@Maeda1982a], we can infer that the ancestral subunit interface was lost. As we do not know in which part of the GbA phylogeny the interface disappeared, and we do not know how pervasive is the subunit interface loss on GbA clade, we will use here a combination of protein-protein docking methods, binding energy predictions, and phylogenetic comparative methods in order to gain insights on where and when the subunit interface was lost in the GbA phylogeny.   
+
+### Protein-protein docking
+
+The homodimerization interface of the $\alpha$-globin chains is the same as described for the heterodimer, where packing contacts between residues located at the helices B, G, and H are responsible for the dimer assemble. Thus, the goal of the protein-protein docking here was to get homodimers as close as possible to the $\alpha$$\beta$ protomer of human Hb (2DN1) used as reference for posterior binding energy calculations. We used different docking algorithms and we chose the results closer to our goal. First, we used the hybrid algorithm of template-based and template-free docking of HDOCK through its web server [@Yan2020; @Huang2008; @Yan2017a; @Yan2017b]. Then, we used HADDOCK (version 2.4) web server to perform a restrained docking using the packing contacts of the $\alpha$$\beta$ protomer as hot spot sites [@Zundert2016; @Honorato2021].   
+
+An example of the script we used for structural alignment and comparison of the docked complexes from HDOCK and HADDOCK is provided below.  
+
+```{r structural_alignment_complexes, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+
+# Structural alignment of the predicted complexes
+library(bio3d)
+library(msa)
+setwd("D:/Biblioteca/Research_projects/Globin_A")
+setwd("neofunctionalization_seq_space/Structures")
+# File path to MUSCLE executable
+file.path("D:", "Biblioteca", "R scripts", "Multiple Sequence Alignment",
+          "muscle3.8.31_i86win32.exe") -> fpe
+#
+# Ame_Hba_02 predicted homodimer
+heterodimer <- read.pdb("heterodimer.pdb") # 2DN1 pdb file
+homodimer <- read.pdb("homodimer.pdb") # homodimer of alpha chains from 2DN1
+m0 <- read.pdb("model_0.pdb") # template-based model from HDOCK
+m1 <- read.pdb("model_1.pdb") # m1 to m10 are the top 10 template-free models
+m2 <- read.pdb("model_2.pdb") # from HDOCK
+m3 <- read.pdb("model_3.pdb")
+m4 <- read.pdb("model_4.pdb")
+m5 <- read.pdb("model_5.pdb")
+m6 <- read.pdb("model_6.pdb")
+m7 <- read.pdb("model_7.pdb")
+m8 <- read.pdb("model_8.pdb")
+m9 <- read.pdb("model_9.pdb")
+m10 <- read.pdb("model_10.pdb")
+m11 <- read.pdb("cluster5_1.pdb") # cluster 5_1 to 5_4 was the cluster from
+m12 <- read.pdb("cluster5_2.pdb") # HADDOCK with lowest RMSD from heterodimer.
+m13 <- read.pdb("cluster5_3.pdb") # We aligned all clusters following the 
+m14 <- read.pdb("cluster5_4.pdb") # ranking order from HADDOCK output.
+#
+# Sequence-based structural alignment and superposition
+pdbs <- pdbaln(list(heterodimer, homodimer, m0, m1, m2, m3, m4, m5, m6, m7,
+                    m8, m9, m10, m11, m12, m13, m14), exefile = fpe, fit=TRUE)
+rmsd(pdbs$xyz)
+# m10 has the lowest RMSD (7.374 Angstrom) from the heterodimer reference
+#
+# Sequence alignment followed by structural alignment on a pair of PDB objects
+aln <- struct.aln(heterodimer, m10, exefile = fpe)
+aln
+m10$xyz <- aln$xyz
+# assign new chain identifiers for output models from HDOCK (operation not
+# necessary for output models from HADDOCK)
+m10$atom[1073:2144, ]$chain <- "B"
+write.pdb(m10, "Ame_Hba_02_homodimer.pdb")
+
+```
+
+### Binding energy calculation
+
+We estimated the binding free energy for the docked complexes using Molecular Mechanics/Generalized Born Surface Area (MM/GBSA) through the HawkDock web server [@Weng2019; @Hou2011; @Sun2014; @Chen2016].  
+
+The values of binding free energies for each complex and RMSD between the best complexes and the $\alpha$$\beta$ protomer are reported in bellow.  
+
+```{r deltaG_rmsd, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Datasets of binding energies and RMSD values for docked homodimers
+#
+# For reference, the human Hb heterodimer deltaG is -96.76 (kcal/mol)
+# and the docked homodimer using human Hb alpha chains is -66.33 (kcal/mol).
+#
+# deltaG in kcal/mol by MM/GBSA in HawkDock
+deltaG_mod <- c(-48.72, -56.33, -62.09, -53.09, -57.47, -46.59, -53.03, -75.45,
+                -59.44, -46.64, -75.57, -37.79, -40.24, -16.57, -20.34, -36.67,
+                -11.07, -17.16, -34.82, -1.38, -32.78, -6.23, -35.34, -52.48,
+                -0.27, -30.23, -47.76, -16.94, -14.13, -50.03, -32.08, -33.0,
+                -61.08, -13.82, -16.32, -29.76, -32.85, -9.33, -25.32, -15.11,
+                -10.8, -11.21, -29.53)
+# RMSD between the best docking solution and the human Hb heterodimer (2DN1)
+RMSD_mod <- c(5.394, 1.045, 0.904, 1.081, 1.200, 7.501, 0.946, 1.085, 5.905,
+              1.055, 1.043, 4.882, 1.253, 2.179, 4.778, 2.472, 3.368, 1.716,
+              8.076, 5.731, 7.458, 0.758, 2.871, 2.004, 3.921, 4.143, 2.795,
+              2.258, 1.984, 4.578, 1.825, 3.319, 1.187, 1.366, 1.097, 1.447,
+              2.293, 1.207, 3.600, 2.245, 1.832, 1.702, 11.350)
+# The chosen docking solution positioned the helices B, G, and H at the binding
+# interface.
+BGH_mod <- c(T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, F, 
+             T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T,
+             T, T, F)
+homodimer <- data.frame(RMSD_mod, BGH_mod, deltaG_mod)
+# Name the rows using sequence labels
+row.names(homodimer) <- c("Ame_Hba_02", "Mun_Hba_01", "Ame_Hba_07",
+                          "Xtr_Hba_01", "Rca_Hba_03", "Xtr_Hba_02",
+                          "Rca_Hba_06", "Xtr_Hba_08", "Rca_Hba_01",
+                          "Npa_Hba_05", "Rma_Hba_01", "Lle_HbGbA1",
+                          "Opu_GbA", "Rar_GbA_01", "Bbu_GbA_19",
+                          "Mfi_GbA", "Pad_GbA", "Npa_GbA",
+                          "Oto_GbA", "Rte_GbA", "Rca_GbA",
+                          "Rpi_GbA", "Bbu_GbA_13", "Bbu_GbA_06",
+                          "Bbu_GbA_10", "Bbu_GbA_11", "Bbu_GbA_12",
+                          "Rma_GbA_01", "Rma_GbA_02", "Rma_GbA_09",
+                          "Rma_GbA_04", "Rma_GbA_03", "Rar_GbA_02",
+                          "Rma_GbA_05", "Bbu_GbA_02", "Bbu_GbA_03",
+                          "Bbu_GbA_07", "Bbu_GbA_20", "Bbu_GbA_08",
+                          "Bbu_GbA_01", "Bbu_GbA_22", "Bbu_GbA_04",
+                          "Bbu_GbA_21")
+pander(homodimer)
+# Binding energies, RMSD and position of the binding interface for ancestors
+deltaG_aa_anc <- c(-35.44, -78.33, -23.53, -43.24, -32.97, -33.92, -2.52)
+RMSD_aa_anc <- c(0.999, 0.949, 0.868, 1.139, 9.848, 2.290, 1.718)
+BGH_aa_anc <- c(T, T, T, T, F, T, T)
+homodimer_aa_anc <- data.frame(RMSD_aa_anc, BGH_aa_anc, deltaG_aa_anc)
+row.names(homodimer_aa_anc) <- c("aa_n48", "aa_n50", "aa_n51", "aa_n54",
+                                 "aa_n55", "aa_n56", "aa_n65")
+pander(homodimer_aa_anc)
+deltaG_dna_anc <- c(-53.88, -40.31, -37.86, -23.31, -35.15, -27.3, -11.04)
+RMSD_dna_anc <- c(1.248, 1.294, 2.244, 1.106, 2.157, 1.442, 1.108)
+BGH_dna_anc <- c(T, T, T, T, T, T, T)
+homodimer_dna_anc <- data.frame(RMSD_dna_anc, BGH_dna_anc, deltaG_dna_anc)
+row.names(homodimer_dna_anc) <- c("dna_n48", "dna_n50", "dna_n51", "dna_n54",
+                                 "dna_n55", "dna_n56", "dna_n65")
+pander(homodimer_dna_anc)
+deltaG_cod_anc <- c(-57.29, -37.27, -37.51, -41.61, -18.9, -6.59, -51.11)
+RMSD_cod_anc <- c(1.073, 1.482, 1.482, 1.048, 3.273, 15.967, 3.123)
+BGH_cod_anc <- c(T, T, T, T, T, F, T)
+homodimer_cod_anc <- data.frame(RMSD_cod_anc, BGH_cod_anc, deltaG_cod_anc)
+row.names(homodimer_cod_anc) <- c("cod_n48", "cod_n50", "cod_n51", "cod_n54",
+                                 "cod_n55", "cod_n56", "cod_n65")
+pander(homodimer_cod_anc)
+
+```
+
+As in the previous section, we will plot the values above mapping them on the gene tree, including the three different reconstructions for each ancestor. We will plot first the RMSD followed by the binding free energies.    
+
+```{r plot_rmsd_anc_aa, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with RMSD between protein complexes and the Hb protomer (2DN1) mapped as a continuous trait. Ancestral states were interpolated with the Felsenstein's equation in the previous section. We supplied ancestral states for the nodes whose ancestors we reconstructed previously using an amino acid substitution model.", cache=TRUE}
+
+x <- homodimer$RMSD_mod
+names(x) <- row.names(homodimer)
+ancGbA <- homodimer_aa_anc$RMSD_aa_anc
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = NULL,
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = cividis(12, direction = 1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.40, t1.contMap$cols, title= expression(paste("RMSD (", "\u212b", ")")),
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+
+```{r plot_deltaG_anc_aa, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with binding free energies (kcal/mol) obtained through MM/GBSA for protein homodimeric complexes mapped as a continuous trait. Ancestral states were interpolated with the Felsenstein's equation in the previous section. We supplied ancestral states for the nodes whose ancestors we reconstructed previously using an amino acid substitution model.", cache=TRUE}
+
+x <- homodimer$deltaG_mod
+names(x) <- row.names(homodimer)
+ancGbA <- homodimer_aa_anc$deltaG_aa_anc
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = NULL,
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = plasma(79, direction = -1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.40, t1.contMap$cols, title= expression(paste(Delta, "G (kcal/mol)")),
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+
+```{r plot_rmsd_anc_cod, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with RMSD between protein complexes and the Hb protomer (2DN1) mapped as a continuous trait. Ancestral states were interpolated with the Felsenstein's equation in the previous section. We supplied ancestral states for the nodes whose ancestors we reconstructed previously using a codon substitution model.", cache=TRUE}
+
+x <- homodimer$RMSD_mod
+names(x) <- row.names(homodimer)
+ancGbA <- homodimer_cod_anc$RMSD_cod_anc
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = NULL,
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = cividis(16, direction = 1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.40, t1.contMap$cols, title= expression(paste("RMSD (", "\u212b", ")")),
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+
+```{r plot_deltaG_anc_cod, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with binding free energies (kcal/mol) obtained through MM/GBSA for protein homodimeric complexes mapped as a continuous trait. Ancestral states were interpolated with the Felsenstein's equation in the previous section. We supplied ancestral states for the nodes whose ancestors we reconstructed previously using a codon substitution model.", cache=TRUE}
+
+x <- homodimer$deltaG_mod
+names(x) <- row.names(homodimer)
+ancGbA <- homodimer_cod_anc$deltaG_cod_anc
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = NULL,
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = plasma(76, direction = -1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.40, t1.contMap$cols, title= expression(paste(Delta, "G (kcal/mol)")),
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+
+
+```{r plot_rmsd_anc_nuc, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with RMSD between protein complexes and the Hb protomer (2DN1) mapped as a continuous trait. Ancestral states were interpolated with the Felsenstein's equation in the previous section. We supplied ancestral states for the nodes whose ancestors we reconstructed previously using a nucleotide substitution model.", cache=TRUE}
+
+x <- homodimer$RMSD_mod
+names(x) <- row.names(homodimer)
+ancGbA <- homodimer_dna_anc$RMSD_dna_anc
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = NULL,
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = cividis(12, direction = 1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.40, t1.contMap$cols, title= expression(paste("RMSD (", "\u212b", ")")),
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+
+```{r plot_deltaG_anc_nuc, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Maximum likelihood phylogram with binding free energies (kcal/mol) obtained through MM/GBSA for protein homodimeric complexes mapped as a continuous trait. Ancestral states were interpolated with the Felsenstein's equation in the previous section. We supplied ancestral states for the nodes whose ancestors we reconstructed previously using a nucleotide substitution model.", cache=TRUE}
+
+x <- homodimer$deltaG_mod
+names(x) <- row.names(homodimer)
+ancGbA <- homodimer_dna_anc$deltaG_dna_anc
+names(ancGbA) <- c("48", "50", "51", "54", "55", "56", "65")
+# Plotting gene tree with net surface charges at the tips and specified nodes
+t1.contMap <- contMap(t1, x, res = 100, fsize = NULL, ftype = NULL,
+                      lwd = 4, legend = FALSE, lims = NULL,
+                      outline = TRUE, sig = 3, type = "phylogram",
+                      direction = "rightward", plot = FALSE,
+                      method = "user", anc.states = ancGbA)
+t1.contMap <- setMap(t1.contMap, colors = plasma(76, direction = -1))
+plot(t1.contMap, ylim=c(1-0.09*(Ntip(t1.contMap$tree)-1), Ntip(t1.contMap$tree)), legend = FALSE, method = "fastAnc", anc.states = ancGbA)
+add.color.bar(0.40, t1.contMap$cols, title= expression(paste(Delta, "G (kcal/mol)")),
+              lims=t1.contMap$lims, digits=3, prompt=FALSE, x=0,
+              y=1-0.08*(Ntip(t1.contMap$tree)-1), lwd=4,fsize=1, subtitle="")
+
+```
+
+\newpage
+
+### Modeling rate shifts in binding energy of putative homodimers
+
+We used the script below to estimate where the rate shifts occurred for the binding energies of the predicted homodimers.  
+
+```{r rate_shift_delta_G, eval=FALSE, include=TRUE}
+
+rmsd_rate_shift <- evol.rate.mcmc(t1, homodimer$RMSD_mod,
+                                  ngen = 1e+05,
+                                  control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                  5.0, 0.1, 0.05, 1000, 10))
+deltaG_rate_shift <- evol.rate.mcmc(t1, homodimer$deltaG_mod,
+                                    ngen = 1e+05,
+                                    control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                  5.0, 0.1, 0.05, 1000, 10))
+obj5 <- summary(rmsd_rate_shift)
+obj5
+obj6 <- summary(deltaG_rate_shift)
+obj6
+save(obj5, obj6, file = "deltaG_rate_shift.RDa")
+
+```
+
+
+```{r load_rate_shift_deltaG}
+
+load("deltaG_rate_shift.RDa")
+
+```
+
+
+```{r plot_rate_shift_rmsd, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Rate shift in RMSD values. Pie charts depicts Bayesian posterior probabilities for rate shifts (filled in blue). Red bar depicts the rate shift with the minimum (squared) distance to all shifts.", cache=TRUE}
+
+plot(obj5,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj5, type = "min.split")
+
+```
+
+
+```{r plot_rate_shift_deltaG, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Rate shift in binding energy values. Pie charts depicts Bayesian posterior probabilities for rate shifts (filled in blue). Red bar depicts the rate shift with the minimum (squared) distance to all shifts.", cache=TRUE}
+
+plot(obj6,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj6, type = "min.split")
+
+```
+
+
+```{r rate_shift_deltaG25, eval=FALSE, include=TRUE}
+
+x1 <- homodimer$RMSD_mod[-c(24:30, 32, 34:43)]
+names(x1) <- row.names(homodimer[-c(24:30, 32, 34:43), ])
+x2 <- homodimer$deltaG_mod[-c(24:30, 32, 34:43)]
+names(x2) <- row.names(homodimer[-c(24:30, 32, 34:43), ])
+rmsd_rate_shift_25 <- evol.rate.mcmc(t2, x1,
+                                     ngen = 1e+05,
+                                     control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                    5.0, 0.1, 0.05, 1000, 10))
+deltaG_rate_shift_25 <- evol.rate.mcmc(t2, x2,
+                                       ngen = 1e+05,
+                                       control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                      5.0,0.1, 0.05, 1000, 10))
+obj5_25 <- summary(rmsd_rate_shift_25)
+obj5_25
+obj6_25 <- summary(deltaG_rate_shift_25)
+obj6_25
+save(obj5_25, obj6_25, file = "deltaG25_rate_shift.RDa")
+
+```
+
+
+```{r load_rate_shift_deltaG25}
+
+load("deltaG25_rate_shift.RDa")
+
+```
+
+
+```{r plot_rate_shift_rmsd25, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Rate shift in RMSD values for the reduced data set. Pie charts depicts Bayesian posterior probabilities for rate shifts (filled in blue). Red bar depicts the rate shift with the minimum (squared) distance to all shifts.", cache=TRUE}
+
+plot(obj5_25,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj5_25, type = "min.split")
+
+```
+
+
+```{r plot_rate_shift_deltaG25, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Rate shift in binding energy values for the reduced data set. Pie charts depicts Bayesian posterior probabilities for rate shifts (filled in blue). Red bar depicts the rate shift with the minimum (squared) distance to all shifts.", cache=TRUE}
+
+plot(obj6_25,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj6_25, type = "min.split")
+
+```
+
+\newpage
+
+As we can see, the rate shift on RMSD seems to have occurred in GbA-I clade while the rate shifts in binding energy occurred along the branch leading to the ancestor of all GbA, but the posterior probabilities are mainly dispersed along the ancestral branches of the GbA clade and the Neobatrachia GbA clade.  
+
+However, the analyses of rate shifts performed above used Brownian motion to estimate all the ancestral node values mapping them from the tip values. We think that a better inference could be performed using the values we estimated from the reconstructed and computationally resurrected ancestors. According to Dr. Liam Revell (phytools developer) [personal communication], this could be done by adding tips with branch length zero at the respective ancestral nodes as if they were node values. As no evolution occurs in zero branch lengths, this manipulation results in the fixation of the node values associated with the tips of length zero. So, we used the script below to perform the analyses.  
+
+```{r rate_shift_with_ancestors, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+
+# First, we need to add the ancestral values as tips of length zero at their
+# respective nodes.
+# Creation the new data sets with the pseudo node values as tips
+anc_nodes1 <- deltaG_aa_anc
+anc_nodes2 <- deltaG_dna_anc
+anc_nodes3 <- deltaG_cod_anc
+names(anc_nodes1) <- c("n28_48", "n32_50", "n33_51", "n36_54", "n37_55",
+                       "n38_56", "n47_65")
+names(anc_nodes2) <- c("n28_48", "n32_50", "n33_51", "n36_54", "n37_55",
+                       "n38_56", "n47_65")
+names(anc_nodes3) <- c("n28_48", "n32_50", "n33_51", "n36_54", "n37_55",
+                       "n38_56", "n47_65")
+deltaG25_plus_anc1 <- c(x2, anc_nodes1)
+deltaG25_plus_anc1
+deltaG25_plus_anc2 <- c(x2, anc_nodes2)
+deltaG25_plus_anc2
+deltaG25_plus_anc3 <- c(x2, anc_nodes3)
+deltaG25_plus_anc3
+# Creating the new tree adding branches of length zero to ancestral nodes
+new.t2 <- t2
+new.t2 <- bind.tip(new.t2, tip.label = "n28_48",
+                   edge.length = 0, where = 28)
+new.t2 <- bind.tip(new.t2, tip.label = "n32_50",
+                   edge.length = 0, where = 34)
+new.t2 <- bind.tip(new.t2, tip.label = "n33_51",
+                   edge.length = 0, where = 36)
+new.t2 <- bind.tip(new.t2, tip.label = "n36_54",
+                   edge.length = 0, where = 40)
+new.t2 <- bind.tip(new.t2, tip.label = "n37_55",
+                   edge.length = 0, where = 42)
+new.t2 <- bind.tip(new.t2, tip.label = "n38_56",
+                   edge.length = 0, where = 44)
+new.t2 <- bind.tip(new.t2, tip.label = "n47_65",
+                   edge.length = 0, where = 54)
+
+# Estimating the rate shifts
+deltaG_rate_shift_25_anc1 <- evol.rate.mcmc(new.t2, deltaG25_plus_anc1,
+                                       ngen = 1e+05,
+                                       control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                      5.0,0.1, 0.05, 1000, 10))
+deltaG_rate_shift_25_anc2 <- evol.rate.mcmc(new.t2, deltaG25_plus_anc2,
+                                       ngen = 1e+05,
+                                       control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                      5.0,0.1, 0.05, 1000, 10))
+deltaG_rate_shift_25_anc3 <- evol.rate.mcmc(new.t2, deltaG25_plus_anc3,
+                                       ngen = 1e+05,
+                                       control = list(1.0, 10.0, 0.0, 0.5, 1.0,
+                                                      5.0,0.1, 0.05, 1000, 10))
+obj6_25_anc1 <- summary(deltaG_rate_shift_25_anc1)
+obj6_25_anc1
+obj6_25_anc2 <- summary(deltaG_rate_shift_25_anc2)
+obj6_25_anc2
+obj6_25_anc3 <- summary(deltaG_rate_shift_25_anc3)
+obj6_25_anc3
+save(obj6_25_anc1, obj6_25_anc2, obj6_25_anc3,
+     file = "deltaG25_anc_rate_shift.RDa")
+
+```
+
+```{r load_rate_shift_deltaG25_anc}
+
+load("deltaG25_anc_rate_shift.RDa")
+
+```
+
+
+```{r plot_rate_shift_deltaG25_anc1, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Rate shift in binding energy values for the reduced data set plus ancestors reconstructed using an amino acid substitution model. Pie charts depicts Bayesian posterior probabilities for rate shifts (filled in blue). Red bar depicts the rate shift with the minimum (squared) distance to all shifts.", cache=TRUE}
+
+plot(obj6_25_anc1,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj6_25_anc1, type = "min.split")
+
+```
+
+
+```{r plot_rate_shift_deltaG25_anc2, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Rate shift in binding energy values for the reduced data set plus ancestors reconstructed using a nucleotide substitution model. Pie charts depicts Bayesian posterior probabilities for rate shifts (filled in blue). Red bar depicts the rate shift with the minimum (squared) distance to all shifts.", cache=TRUE}
+
+plot(obj6_25_anc2,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj6_25_anc2, type = "min.split")
+
+```
+
+
+```{r plot_rate_shift_deltaG25_anc3, echo=FALSE, fig.height=8.0, message=FALSE, warning=FALSE, fig.cap="Rate shift in binding energy values for the reduced data set plus ancestors reconstructed using a codon substitution model. Pie charts depicts Bayesian posterior probabilities for rate shifts (filled in blue). Red bar depicts the rate shift with the minimum (squared) distance to all shifts.", cache=TRUE}
+
+plot(obj6_25_anc3,method="edge.prob",piecol=c("blue","lightgrey"),
+     ftype="off",mar=c(0.1,0.1,5.1,0.1))
+plot(obj6_25_anc3, type = "min.split")
+
+```
+
+\newpage
+
+### Energetic contribution of packing residues substitutions
+
+Now we will look to the packing residues at the homodimer interface of each reconstructed ancestor and we will try to explain the differences in binding affinity observed above. The packing residues are located at the respective sites of the human $\alpha$-globin (initial methionine included): R32, L35, S36, F37, K100, H104, V108, A111, A112, P115, A116, F118, T119, P120, H123, A124, D127, and K128 [@Storz2019a]. Below we show the energetic contribution of each packing residue for the total binding energy as estimated through MM/GBSA in HawkDock.
+
+\newpage
+
+```{r packing_residues_Hba, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Contributions of each packing residue for homodimer binding in human Hba
+# calculated using MM/GBSA in HawkDock. Total binding energy is -66.33 kcal/mol
+Hba_chain_A <- c(-3.93, -2.11, -1.59, -0.79, 0.57, -1.29, -3.68, -1.66, -2.07,
+           -1.16, -0.01, -1.65, -0.04, -5.22, -3.03, -2.33, 1.21, 0.57)
+Hba_chain_B <- c(-2.74, -1.95, -1.4, -0.65, 0.86, -1.68, -5.17, -1.43, -1.92,
+           -1.23, 0.03, -4.53, 0.21, -5.25, -4.58, -2.36, 0.95, 0.39)
+Hba <- data.frame(Hba_chain_A, Hba_chain_B)
+row.names(Hba) <- c("R32", "L35", "S36", "F37", "K100", "H104", "V108",
+                    "A111", "A112", "P115", "A116", "F118", "T119", "P120",
+                    "H123", "A124", "D127", "K128")
+kable(Hba, caption = "Contributions of each packing residue for homodimer binding in human Hba calculated using MM/GBSA in HawkDock. Total binding energy was -66.33 kcal/mol.")
+
+```
+
+The total contribution for the binding energy of the human $\alpha$-globin homodimer considering only the packing residues is `r sum(Hba[, 1], Hba[, 2])` kcal/mol.
+
+\newpage
+
+The three ancestors reconstructed for node 48 presented the following binding free energies: `r homodimer_aa_anc[[1, 3]]`, `r homodimer_cod_anc[[1, 3]]`, and `r homodimer_dna_anc[[1, 3]]` kcal/mol. Comparing with human $\alpha$-glboin, we can observe in the ancestor 48 the substitutions F37Y in all reconstructions, A116D in codon and nucleotide reconstructions, P120A in amino acid and nucleotide reconstructions, and H123Q in all reconstructions. Below we will see the contribution of each substitution of packing residue relative to the human $\alpha$-globin for the three reconstruction of the ancestor 48.
+
+```{r packing_residues_anc48, echo=FALSE, message=FALSE, warning=FALSE}
+
+aa_n48_A <- c(-2.54, NA, -1.52, -4.34)
+aa_n48_B <- c(-2.34, NA, -0.79, -2.77)
+cod_n48_A <- c(-0.82, 1.27, NA, -0.9)
+cod_n48_B <- c(-1.37, 1.22, NA, -3)
+dna_n48_A <- c(-2.25, 1.49, -1.42, -1.36)
+dna_n48_B <- c(-1.36, 0.87, -1.74, 0.72)
+n48 <- data.frame(aa_n48_A, aa_n48_B, cod_n48_A, cod_n48_B, dna_n48_A,
+                  dna_n48_B)
+row.names(n48) <- c("F37Y", "A116D", "P120A", "H123Q")
+kable(n48, caption = "Contribution of each packing residue substituted in the ancestor 48 for homodimer interaction.")
+
+```
+
+\newpage
+
+The three ancestors reconstructed for node 50 presented the following binding free energies: `r homodimer_aa_anc[[2, 3]]`, `r homodimer_cod_anc[[2, 3]]`, and `r homodimer_dna_anc[[2, 3]]` kcal/mol. Comparing with human $\alpha$-glboin, we can observe in the ancestor 50 the substitutions F37Y in all reconstructions, A116G in amino acid and A116D in codon and nucleotide reconstructions, P120A in amino acid and nucleotide reconstructions, and H123Q in all reconstructions.
+
+```{r packing_residues_anc50, echo=FALSE, message=FALSE, warning=FALSE}
+
+aa_n50_A <- c(-4.67, -0.58, NA, -3.39, -4.02)
+aa_n50_B <- c(-4.15, -0.52, NA, -3.7, -1.99)
+cod_n50_A <- c(-1.3, NA, 0.84, NA, -2.48)
+cod_n50_B <- c(-1.71, NA, 0.67, NA, 0.36)
+dna_n50_A <- c(-4.79, NA, 0.58, -3.55, 0.08)
+dna_n50_B <- c(-0.56, NA, 0.58, -3.33, -0.37)
+n50 <- data.frame(aa_n50_A, aa_n50_B, cod_n50_A, cod_n50_B, dna_n50_A,
+                  dna_n50_B)
+row.names(n50) <- c("F37Y", "A116G", "A116D", "P120A", "H123Q")
+kable(n50, caption = "Contribution of each packing residue substituted in the ancestor 50 for homodimer interaction.")
+
+```
+
+\newpage
+
+The three ancestors reconstructed for node 51 presented the following binding free energies: `r homodimer_aa_anc[[3, 3]]`, `r homodimer_cod_anc[[3, 3]]`, and `r homodimer_dna_anc[[3, 3]]` kcal/mol. Comparing with human $\alpha$-glboin, we can observe in the ancestor 51 the substitutions F37Y, A116G in amino acid and A116D in codon and nucleotide reconstructions, P120A in amino acid and nucleotide reconstructions, and H123Q in all reconstructions.
+
+```{r packing_residues_anc51, echo=FALSE, message=FALSE, warning=FALSE}
+
+aa_n51_A <- c(-3, -0.02, NA, -1.85, -2.27)
+aa_n51_B <- c(-1.15, 0.07, NA, -1.22, 0.61)
+cod_n51_A <- c(-1.18, NA, 0.87, NA, -2.4)
+cod_n51_B <- c(-1.73, NA, 0.67, NA, 0.56)
+dna_n51_A <- c(-1.79, NA, 1.6, -2.1, -1.01)
+dna_n51_B <- c(-1.92, NA, 1.08, -1.69, -1.37)
+n51 <- data.frame(aa_n51_A, aa_n51_B, cod_n51_A, cod_n51_B, dna_n51_A,
+                  dna_n51_B)
+row.names(n51) <- c("F37Y", "A116G", "A116D", "P120A", "H123Q")
+kable(n51, caption = "Contribution of each packing residue substituted in the ancestor 51 for homodimer interaction.")
+
+```
+
+\newpage
+
+The three ancestors reconstructed for node 54 presented the following binding free energies: `r homodimer_aa_anc[[4, 3]]`, `r homodimer_cod_anc[[4, 3]]`, and `r homodimer_dna_anc[[4, 3]]` kcal/mol. Comparing with human $\alpha$-glboin, we can observe in the ancestor 54 the substitutions S36N in codon and nucleotide reconstructions, F37Y and H104V in all reconstructions, A116G in amino acid and A116D in codon and nucleotide reconstructions, T119N in amino acid and codon reconstructions, P120A in nucleotide reconstruction, and H123Q in all reconstructions.
+
+```{r packing_residues_anc54, echo=FALSE, message=FALSE, warning=FALSE}
+
+aa_n54_A <- c(NA, -1.96, -2.21, -0.13, NA, 0.02, NA, -2.11)
+aa_n54_B <- c(NA, -2.64, -4.07, 0.02, NA, -0.18, NA, -1.07)
+cod_n54_A <- c(0.38, -1.6, -2.06, NA, 1.05, 0.3, NA, -4.99)
+cod_n54_B <- c(-4.87, -3.7, -2.01, NA, 1.04, 0.59, NA, 2.61)
+dna_n54_A <- c(-2.62, -0.1, -1.38, NA, -0.15, NA, -1.07, -1.55)
+dna_n54_B <- c(-0.16, -1.02, -2.44, NA, 0.69, NA, -2.28, -2.52)
+n54 <- data.frame(aa_n54_A, aa_n54_B, cod_n54_A, cod_n54_B, dna_n54_A,
+                  dna_n54_B)
+row.names(n54) <- c("S36N", "F37Y", "H104V", "A116G", "A116D", "T119N",
+                    "P120A", "H123Q")
+kable(n54, caption = "Contribution of each packing residue substituted in the ancestor 54 for homodimer interaction.")
+
+```
+
+\newpage
+
+The three ancestors reconstructed for node 55 presented the following binding free energies: `r homodimer_aa_anc[[5, 3]]`, `r homodimer_cod_anc[[5, 3]]`, and `r homodimer_dna_anc[[5, 3]]` kcal/mol. Comparing with human $\alpha$-glboin, we can observe in the ancestor 55 the substitutions L35Q, S36N, F37H, H104V, V108E, and A116G in all reconstructions, T119N in amino acid and codon reconstructions, P120A in nucleotide reconstruction (deletion in codon reconstruction), H123Q in all reconstructions, and D127E in amino acid reconstruction.
+
+```{r packing_residues_anc55, echo=FALSE, message=FALSE, warning=FALSE}
+
+aa_n55_A <- c(0.08, 0.15, -1.5, -4.84, 1.5, 0.1, -2.41, NA, -1.02, 1.77)
+aa_n55_B <- c(0.17, -0.37, -1.55, -2.14, -0.74, -2.21, -0.29, NA, -1.14, 0.86)
+cod_n55_A <- c(0.4, -1.28, -3.44, -3.68, -1.19, 0.03, 0.26, NA, -1.01, NA)
+cod_n55_B <- c(0.33, -1.62, -2.31, -2.96, -2.38, 0.03, 0.3, NA, 0.7, NA)
+dna_n55_A <- c(0.32, -3.16, -0.68, -2.17, -1.21, -0.64, NA, -2.85, -0.36, NA)
+dna_n55_B <- c(0.31, -3.84, -1.82, -2.23, -1.28, -0.11, NA, -2.32, -0.28, NA)
+n55 <- data.frame(aa_n55_A, aa_n55_B, cod_n55_A, cod_n55_B, dna_n55_A,
+                  dna_n55_B)
+row.names(n55) <- c("L35Q", "S36N", "F37H", "H104V", "V108E", "A116G",
+                    "T119N", "P120A", "H123Q", "D127E")
+kable(n55, caption = "Contribution of each packing residue substituted in the ancestor 55 for homodimer interaction.")
+
+```
+
+\newpage
+
+The three ancestors reconstructed for node 56 presented the following binding free energies: `r homodimer_aa_anc[[6, 3]]`, `r homodimer_cod_anc[[6, 3]]`, and `r homodimer_dna_anc[[6, 3]]` kcal/mol. Comparing with human $\alpha$-glboin, we can observe in the ancestor 56 the substitutions L35Q, S36N, F37H, H104V, V108E, A116G, T119N, (P120 deleted), and H123Q in all reconstructions; D127E in amino acid and codon reconstructions.
+
+```{r packing_residues_anc56, echo=FALSE, message=FALSE, warning=FALSE}
+
+aa_n56_A <- c(0.32, -0.25, -0.85, -3.11, -0.45, -0.13, -1.79, -4.28, 1.33)
+aa_n56_B <- c(0.21, 0.5, -0.04, -2.04, 0.59, -0.31, -3.75, -1.26, 1.05)
+cod_n56_A <- c(0, 0.03, 0.04, -0.01, 0.24, 0, 0.02, 0.01, 0.5)
+cod_n56_B <- c(0, 0.03, 0.05, -0.01, 0.22, 0, 0.02, 0.02, -0.45)
+dna_n56_A <- c(0.44, -2.93, -2.4, -2.14, -0.9, 0.02, 0.49, -4.27, NA)
+dna_n56_B <- c(0.56, -0.76, -0.19, -1.93, -1.19, -0.12, -1.09, -4.06, NA)
+n56 <- data.frame(aa_n56_A, aa_n56_B, cod_n56_A, cod_n56_B, dna_n56_A,
+                  dna_n56_B)
+row.names(n56) <- c("L35Q", "S36N", "F37H", "H104V", "V108E", "A116G",
+                    "T119N", "H123Q", "D127E")
+kable(n56, caption = "Contribution of each packing residue substituted in the ancestor 56 for homodimer interaction.")
+
+```
+
+\newpage
+
+The three ancestors reconstructed for node 65 presented the following binding free energies: `r homodimer_aa_anc[[7, 3]]`, `r homodimer_cod_anc[[7, 3]]`, and `r homodimer_dna_anc[[7, 3]]` kcal/mol. Comparing with human $\alpha$-glboin, we can observe in the ancestor 65 the substitutions R32S, L35Q, S36H, F37H, H104G, V108E, A111V, A112K, A116D, (F118, T119, and P120 were deleted), H123K, and A124S in all reconstructions; D127E in amino acid and codon reconstructions.
+
+```{r packing_residues_anc65, echo=FALSE, message=FALSE, warning=FALSE}
+
+aa_n65_A <- c(0.5, 0.27, -2.48, -1.92, 0.03, -3.65, -2.49, -3.32, 0.48, 2.13,
+              -0.37)
+aa_n65_B <- c(0.12, 0.28, -0.54, 0.72, 0.09, -4.35, -2.38, 0.31, -2.48,
+              1.46, -1.09)
+cod_n65_A <- c(-0.9, -0.88, -2.75, -2.28, -0.56, -4.78, -3.5, -3.25, -1.75,
+               -1.17, -0.05)
+cod_n65_B <- c(-0.13, -0.88, -2.95, -2.36, -1.1, -6.28, -3.47, -2, -2.42,
+               -2.58, -0.14)
+dna_n65_A <- c(0.28, 0.24, -2.49, -1.01, -0.33, -1.15, -3.04, -1.45, 0.71,
+               -1.66, NA)
+dna_n65_B <- c(-2.71, -0.13, -3.79, -1.4, -0.58, 2.22, -2.31, -4.76, 1.78,
+               -0.08, NA)
+n65 <- data.frame(aa_n65_A, aa_n65_B, cod_n65_A, cod_n65_B, dna_n65_A,
+                  dna_n65_B)
+row.names(n65) <- c("R32S", "L35Q", "S36H", "F37H", "H104G", "V108E", "A111V",
+                    "A112K", "A116D", "H123K", "A124S")
+kable(n65, caption = "Contribution of each packing residue substituted in the ancestor 65 for homodimer interaction.")
+
+```
+
+\newpage
+
+### Structural analysis of subunit interface and the critical role of deletions in disrupting the homodimer state
+
+The solvent-accessible surface area (SASA) of the $\alpha$-chain homodimer is equal to 13492.576 $\overset{\circ}{\mathrm{A}}^2$. As the isolated $\alpha$-chain has SASA equal to 7599.743 $\overset{\circ}{\mathrm{A}}^2$ ($\times$ 2 = 15199.49 $\overset{\circ}{\mathrm{A}}^2$), the buried surface area of the homodimer interface is equal to 1706.914 $\overset{\circ}{\mathrm{A}}^2$, which is the range expected for weak homodimeric complexes [@Dey2010].  
+
+We used the commands below in PyMOL to calculate the solvent-accessible surface area.  
+
+```{r SASA_PyMol, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+
+set dot_solvent, 1
+set dot_density, 3
+get_area
+
+```
+
+Small insertions and deletions are an important evolutionary mechanism of oligomerization [@Hashimoto2010]. In particular, insertion/deletion of new secondary elements, or the extension/flexion of existing secondary elements can enable/disable the oligomerization state [@Hashimoto2010]. However, the horizontal analysis of homologous proteins can't tell how often the relative frequency of the enabling/disabling process occurs in the evolution of protein complexes.  Our vertical evolutionary biochemistry analysis allows us to set the time arrow for the evolution, as we know that the ancestral state of the GbA clade was a homodimeric $\alpha$-type globin, and our previous analysis indicates that at the very least, the two clades found in Neobatrachia are devoid of the ancestral subunit interface (despite we cannot rule out the emergence of other interfaces). So, we will examine vertically the structure of the ancestors of the  GbA clade, as well as some modern descendants with special attention to the role of each deletion identified previously in disabling the homodimeric state comparing them with the human Hb heterodimer.  
+
+First, we will plot the MSA with the relevant sequences, highlighting the packing residues by hydrofobicity.  
+
+```{r paper_msa_packages, echo=TRUE, message=FALSE, warning=FALSE, results='hide'}
+
+# Necessary packages for the MSA below
+library(ggmsa)
+library(ggside)
+library(cowplot)
+library(Biostrings)
+library(scales)
+library(viridis)
+library(colourvalues)
+
+```
+
+```{r msa_paper1, echo=TRUE, message=FALSE, warning=FALSE, fig.cap="MSA showing selected sequences for analysis of the role of deletions in disrupting the homodimeric state. Amino acids involved in packing contacts between homodimers are coloured by hydrophobicity according to Janin scale. Sliding residues involved in interdimer contacts of Hb were highlighted with grey boxes. Secondary structures of the human $\\alpha$-globin used as reference are depicted at the top of the MSA. Range of sites where the main deletions occurred are depicted as red numbers above secondary structure annotations.", cache=TRUE}
+
+# Custom palette for hydrophobicity
+aa <- c("I", "F", "V", "L", "W", "M", "A", "G", "C", "Y", "P", 
+        "T", "S", "H", "E", "N", "Q", "D", "K", "R", "-")
+# Eisenberg_Weiss <- c(0.73, 0.61, 0.54, 0.53, 0.37, 0.26, 0.25, 0.16, 0.04,
+#                      0.02, -0.07, -0.18, -0.26, -0.4, -0.62, -0.64, -0.69,
+#                      -0.72, -1.1, -1.8, NA)
+# Englemane_et_al <- c(3.1, 3.7, 2.6, 2.8, 1.9, 3.4, 1.6, 1.0, 2.0, -0.7, -0.2, 
+#                      1.2, 0.6, -3.0, -8.2, -4.8, -4.1, -9.2, -8.8, -12.3, NA)
+# Kyte_Doolittle <- c(4.5, 2.8, 4.2, 3.8, -0.9, 1.9, 1.8, -0.4, 2.5, -1.3, -1.6,
+#                     -0.7, -0.8, -3.2, -3.5, -3.5, -3.5, -3.5, -3.9, -4.5, NA)
+# Hoop_Woods <- c(-1.8, -2.5, -1.5, -1.8, -3.4, -1.3, -0.5, 0, -1, -2.3, 0, -0.4,
+#                 0.3, -0.5, 3, 0.2, 0.2, 3, 3, 3, NA)
+Janin <- c(0.7, 0.5, 0.6, 0.5, 0.3, 0.4, 0.3, 0.3, 0.9, -0.4, -0.3, -0.2, 
+           -0.1, -0.1, -0.7, -0.5, -0.7, -0.6, -1.8, -1.4, NA)
+my_custom <- data.frame(names = aa, color = Janin,
+                        stringsAsFactors = FALSE)
+# my_custom$color <- rescale(Janin, to = c(1, 0),
+#                            from = range(Janin, na.rm = FALSE, finite = TRUE))
+# my_custom$color <- colour_values(my_custom$color,
+#                                  palette = "viridis",
+#                                  alpha = 80, na_colour = "#FFFFFFFF")
+# Because an error in UseMethod("rescale") was happening, we will provide
+# the rescale values for our custom pallete collor manually.
+my_custom$color <- c("#481C6E50", "#46348050", "#48287850", "#46348050", 
+                     "#3E4A8950", "#423F8550", "#3E4A8950", "#3E4A8950", 
+                     "#44015450", "#228C8D50", "#26838E50", "#297A8E50", 
+                     "#2D718E50", "#2D718E50", "#21A68550", "#1F958C50",
+                     "#21A68550", "#1F9D8950", "#FDE72550", "#9BD93C50", 
+                     "#FFFFFFFF")
+paper_msa <- readAAMultipleAlignment("msa_paper.fasta",
+                               format = "fasta")
+msadata1 <- tidy_msa(paper_msa, start = 1, end = 71)
+msadata2 <- tidy_msa(paper_msa, start = 72, end = 142)
+pmsa1 <- ggplot() + 
+  geom_msa(msadata1, custom_color = my_custom, char_width = 0.9, 
+           none_bg = FALSE, by_conservation = FALSE,
+           position_highlight = c(32, 35:37, 100, 104, 108, 111:112, 115:116, 
+                                  118:121, 123:124, 127:128),
+           seq_name = TRUE, border = "white", consensus_views = FALSE, 
+           use_dot = FALSE, disagreement = FALSE, ignore_gaps = FALSE, 
+           ref = NULL, show.legend = FALSE) + 
+  xlab(NULL) + ylab(NULL) +
+  labs(fill = "hydrophobicity") + coord_fixed(ratio = 1.8) +
+  scale_x_continuous(expand = c(0, 0)) + theme_minimal() + 
+  theme(strip.text = element_blank(), panel.spacing.y = unit(0.4, 
+        "in"), panel.grid = element_blank()) + 
+  annotate("rect", xmin=37.5, xmax=39.5, ymin=-Inf , ymax=Inf, alpha=2, 
+           color = "grey60", size = .5, fill = NA) + 
+  annotate("rect", xmin=40.5, xmax=43.5, ymin=-Inf , ymax=Inf, alpha=2, 
+           color = "grey60", size = .5, fill = NA) + 
+  annotate("rect", xmin=44.5, xmax=45.5, ymin=-Inf , ymax=Inf, alpha=2, 
+           color = "grey60", size = .5, fill = NA) + 
+  geom_xsidetext(data = msadata1, aes(x = 4, y = 10.2, label = "A1"), 
+                 color = "black", size = 2) + 
+  geom_xsidesegment(data = msadata1, aes(x = 4.8, xend = 17.8, y = 10.2, 
+                                         yend = 10.2), 
+                    color = "grey45", size = .5, show.legend = FALSE) + 
+  geom_xsidetext(data = msadata1, aes(x = 19, y = 10.2, label = "A16"), 
+                 color = "black", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 21, y = 10.2, label = "B1"), 
+                 color = "black", size = 2) + 
+  geom_xsidesegment(data = msadata1, aes(x = 22, xend = 34.5, y = 10.2, 
+                                         yend = 10.2), 
+                    color = "grey45", size = .5, show.legend = FALSE) + 
+  geom_xsidetext(data = msadata1, aes(x = 35.65, y = 10.2, label = "B16"), 
+                 color = "black", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 37.35, y = 10.2, label = "C1"), 
+                 color = "black", size = 2) + 
+  geom_xsidesegment(data = msadata1, aes(x = 38.1, xend = 42.1, y = 10.2, 
+                                         yend = 10.2), 
+                    color = "grey45", size = .5, show.legend = FALSE) + 
+  geom_xsidetext(data = msadata1, aes(x = 43.1, y = 10.2, label = "C7"), 
+                 color = "black", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 53, y = 10.2, label = "E1"), 
+                 color = "black", size = 2) + 
+  geom_xsidesegment(data = msadata1, aes(x = 53.9, xend = 69.3, y = 10.2, 
+                                         yend = 10.2), 
+                    color = "grey45", size = .5, show.legend = FALSE) + 
+  geom_xsidetext(data = msadata1, aes(x = 70.5, y = 10.2, label = "E19"), 
+                 color = "black", size = 2)
+# scale_fill_viridis_d(guide = guide_legend(label = FALSE))
+pmsa2 <- ggplot() + 
+  geom_msa(msadata2, custom_color = my_custom, char_width = 0.9, 
+           none_bg = FALSE, by_conservation = FALSE,
+           position_highlight = c(32, 35:37, 100, 104, 108, 111:112, 115:116, 
+                                  118:121, 123:124, 127:128),
+           seq_name = TRUE, border = "white", consensus_views = FALSE, 
+           use_dot = FALSE, disagreement = FALSE, ignore_gaps = FALSE, 
+           ref = NULL, show.legend = FALSE) + xlab(NULL) + ylab(NULL) +
+  labs(fill = "hydrophobicity") + coord_fixed(ratio = 1.8) +
+  scale_x_continuous(expand = c(0, 0)) + theme_minimal() + 
+  theme(strip.text = element_blank(), panel.spacing.y = unit(0.4, 
+        "in"), panel.grid = element_blank()) + 
+  annotate("rect", xmin=91.5, xmax=93.5, ymin=-Inf , ymax=Inf, alpha=2, 
+           color = "grey60", size = .5, fill = NA) + 
+  annotate("rect", xmin=94.5, xmax=98.5, ymin=-Inf , ymax=Inf, alpha=2, 
+           color = "grey60", size = .5, fill = NA) + 
+  annotate("rect", xmin=140.5, xmax=142.5, ymin=-Inf , ymax=Inf, alpha=2, 
+           color = "grey60", size = .5, fill = NA) + 
+  geom_xsidetext(data = msadata1, aes(x = 81, y = 10.2, label = "F1"), 
+                 color = "black", size = 2) + 
+  geom_xsidesegment(data = msadata1, aes(x = 81.8, xend = 88, y = 10.2, 
+                                         yend = 10.2), 
+                    color = "grey45", size = .5, show.legend = FALSE) + 
+  geom_xsidetext(data = msadata1, aes(x = 89, y = 10.2, label = "F9"), 
+                 color = "black", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 95, y = 10.2, label = "G1"), 
+                 color = "black", size = 2) + 
+  geom_xsidesegment(data = msadata1, aes(x = 95.8, xend = 111.7, y = 10.2, 
+                                         yend = 10.2), 
+                    color = "grey45", size = .5, show.legend = FALSE) + 
+  geom_xsidetext(data = msadata1, aes(x = 112.8, y = 10.2, label = "G19"), 
+                 color = "black", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 119, y = 10.2, label = "H1"), 
+                 color = "black", size = 2) + 
+  geom_xsidesegment(data = msadata1, aes(x = 119.8, xend = 138.7, y = 10.2, 
+                                         yend = 10.2), 
+                    color = "grey45", size = .5, show.legend = FALSE) + 
+  geom_xsidetext(data = msadata1, aes(x = 139.8, y = 10.2, label = "H21"), 
+                 color = "black", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 140, y = 11.5, label = "1"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 141, y = 11.5, label = "1"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 142, y = 11.5, label = "1"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 116, y = 11.5, label = "2"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 117, y = 11.5, label = "2"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 118, y = 11.5, label = "2"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 119, y = 11.5, label = "2"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 120, y = 11.5, label = "2"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 121, y = 11.5, label = "2"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 122, y = 11.5, label = "2"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 75, y = 11.5, label = "3"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 76, y = 11.5, label = "3"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 77, y = 11.5, label = "3"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 78, y = 11.5, label = "3"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 79, y = 11.5, label = "3"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 81, y = 11.5, label = "3"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 82, y = 11.5, label = "3"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 83, y = 11.5, label = "3"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 84, y = 11.5, label = "3"), 
+                 color = "firebrick", size = 2) + 
+  geom_xsidetext(data = msadata1, aes(x = 85, y = 11.5, label = "3"), 
+                 color = "firebrick", size = 2)
+ppmsa <- list(pmsa1, pmsa2)
+plot_grid(plotlist = ppmsa, ncol = 1)
+```
+
+\newpage
+
+The image below shows the $\alpha$-helices F, G, and H from Lle_HbGbA1 modeled homodimeric complex superimposed on the Hb $\alpha\beta$ heterodimer. We highlight the $\alpha$-helices F, G, and H because all deletions occurred in this region, and the last two $\alpha$-helices are part of the dimer interface. We want to search for structural changes that could potentially account for the loss of the interface. After we observed the overall differences in position of helices, we think that the differences we can see in Lle_HbGbA1 here are not due to major structural changes, but simply due to the overall fit of the structural alignment, as the helices and inter-helical regions seems to have the same length and similar conformation.  
+
+![Superposition of Lle_HbGbA1 F, G, and H $\alpha$-helices (yellow) on Hb heterodimer (red). Subunit $\alpha$ is depicted by protein surface in red, while subunit $\beta$ is depicted by protein surface in white. .](Figures/Lle_HbGbA1_homodimer_ray.png)  
+
+\newpage
+
+The next figure shows the ancestor of all GbA-type proteins. We did not observe any significant difference between the positioning of the helices and we think this ancestor is likely able to form homodimers.  
+
+![Superposition of dna_n54 F, G, and H $\alpha$-helices (yellow) on Hb heterodimer (red). Subunit $\alpha$ is depicted by protein surface in red, while subunit $\beta$ is depicted by protein surface in white. .](Figures/dna_n54_homodimer_ray.png)
+
+\newpage
+
+The next two figures are the same ancestor, the Neobatrachia GbA ancestor, reconstructed using nucleotide and codon substitution models, respectively. As the MSA is ambiguous with respect to the second deletion, where the nucleotide alignment suggests that deletion 2 do not occurred in the Neobatrachia ancestor while the codon alignment suggests the opposite. The main difference we observed between the two structures is in the inter-helical GH region and the beginning of the H helix, in which we noted that the loop and the helix is shorter in the codon reconstruction. This region has many packing contacts and its loss may destabilize the complex, which may reflect on the difference in binding affinities between the two ancestors (the codon ancestor has approximately half the biding affinity relative to the nucleotide ancestor).  
+
+![Superposition of dna_n55 F, G, and H $\alpha$-helices (yellow) on Hb heterodimer (red). Subunit $\alpha$ is depicted by protein surface in red, while subunit $\beta$ is depicted by protein surface in white. .](Figures/dna_n55_homodimer_ray.png)
+
+![Superposition of cod_n55 F, G, and H $\alpha$-helices (yellow) on Hb heterodimer (red). Subunit $\alpha$ is depicted by protein surface in red, while subunit $\beta$ is depicted by protein surface in white. .](Figures/cod_n55_homodimer_ray.png)
+
+\newpage
+
+The ancestral node 56 corresponds to the GbA-I clade last common ancestor. As we can observe, the beginning of the $\alpha$-helix H is shorter and this should disrupt many intersubunit contacts because this region possesses many packing residues.   
+
+![Superposition of dna_n56 F, G, and H $\alpha$-helices (yellow) on Hb heterodimer (red). Subunit $\alpha$ is depicted by protein surface in red, while subunit $\beta$ is depicted by protein surface in white. .](Figures/dna_n56_homodimer_ray.png)
+
+\newpage
+
+Finally, the ancestral node 65 corresponds do the last common ancestor of the GbA-II clade that is present only in Bufonidae species. We can observe that the interhelical region GH is shorter, and this region also has packing residues and may also be involved in destabilizing the homodimeric state.  
+
+![Superposition of dna_n65 F, G, and H $\alpha$-helices (yellow) on Hb heterodimer (red). Subunit $\alpha$ is depicted by protein surface in red, while subunit $\beta$ is depicted by protein surface in white. .](Figures/dna_n65_homodimer_ray.png)
+
+\newpage
+
+### Rate variation among protein sites
+
+Evolutionary rate variation among protein sites is influenced by some structural, environmental, and functional constraints; the later includes protein-protein interfaces [@Echave2016]. So, we decided to estimate and analyze the variation in site-specific evolutionary rates of the GbA clades and compare them with $\alpha^E$-globins with special attention to the homodimer interface. We used Datamonkey web server (https://www.datamonkey.org/) [@KosakovskyPond2005; @KosakovskyPond2020; @KosakovskyPond2005b; @Delport2010; @Weaver2018] to estimate site-specific synonymous and non-synonymous codon substitutions along selected branches of our dataset through the _fixed effects likelihood_ (FEL) algorithm [@KosakovskyPond2005a].  
+
+First, we will show the plots from Datamonkey for the rate estimates according to the type of substitution and selection class, and the rate density plots.  
+
+![Maximum likelihood estimates of synonymous ($\alpha$) and non-synonymous rates ($\beta$) at each site shown as bars. The line shows the estimates under the null model ($\alpha = \beta$). Estimates above 10 are censored at this value. We selected the branches of $\alpha^E$-globins to test for rate variation among sites.](Datamonkey/HbaE_alpha-beta_site-level_estimate.png)
+
+\newpage
+
+![Maximum likelihood estimates of synonymous ($\alpha$) and non-synonymous rates ($\beta$) at each site. Estimates above 10 are censored at this value. p-values are also shown. We selected the branches of $\alpha^E$-globins to test for rate variation among sites.](Datamonkey/HbaE_dense_rate_plot.png)
+
+\newpage
+
+![Kernel density estimates of site-level rate estimates. Means are shown with red rules. Estimates above 10 are censored at this value. We selected the branches of $\alpha^E$-globins to test for rate variation among sites.](Datamonkey/HbaE_rate_density_plots.png)
+
+\newpage
+
+![Maximum likelihood estimates of synonymous ($\alpha$) and non-synonymous rates ($\beta$) at each site shown as bars. The line shows the estimates under the null model ($\alpha = \beta$). Estimates above 10 are censored at this value. We selected the branch of Lle_HbGbA1 to test for rate variation among sites.](Datamonkey/Lle_HbGbA1_alpha-beta_site-level_estimate.png)
+
+\newpage
+
+![Maximum likelihood estimates of synonymous ($\alpha$) and non-synonymous rates ($\beta$) at each site. Estimates above 10 are censored at this value. p-values are also shown. We selected the branch of Lle_HbGbA1 to test for rate variation among sites.](Datamonkey/Lle_HbGbA1_dense_rate_plot.png)
+
+\newpage
+
+![Kernel density estimates of site-level rate estimates. Means are shown with red rules. Estimates above 10 are censored at this value. We selected the branch of Lle_HbGbA1 to test for rate variation among sites.](Datamonkey/Lle_HbGbA1_rate_density_plots.png)
+
+\newpage
+
+![Maximum likelihood estimates of synonymous ($\alpha$) and non-synonymous rates ($\beta$) at each site shown as bars. The line shows the estimates under the null model ($\alpha = \beta$). Estimates above 10 are censored at this value. We selected the branch of the GbA-I clade to test for rate variation among sites.](Datamonkey/GbA-I_alpha-beta_site-level_estimate.png)
+
+\newpage
+
+![Maximum likelihood estimates of synonymous ($\alpha$) and non-synonymous rates ($\beta$) at each site. Estimates above 10 are censored at this value. p-values are also shown. We selected the branch of the GbA-I clade to test for rate variation among sites.](Datamonkey/GbA-I_dense_rate_plot.png)
+
+\newpage
+
+![Kernel density estimates of site-level rate estimates. Means are shown with red rules. Estimates above 10 are censored at this value. We selected the branch of the GbA-I clade to test for rate variation among sites.](Datamonkey/GbA-I_rate_density_plots.png)
+
+\newpage
+
+![Maximum likelihood estimates of synonymous ($\alpha$) and non-synonymous rates ($\beta$) at each site shown as bars. The line shows the estimates under the null model ($\alpha = \beta$). Estimates above 10 are censored at this value. We selected the branch of the GbA-II clade to test for rate variation among sites.](Datamonkey/GbA-II_alpha-beta_site-level_estimate.png)
+
+\newpage
+
+![Maximum likelihood estimates of synonymous ($\alpha$) and non-synonymous rates ($\beta$) at each site. Estimates above 10 are censored at this value. p-values are also shown. We selected the branch of the GbA-II clade to test for rate variation among sites.](Datamonkey/GbA-II_dense_rate_plot.png)
+
+\newpage
+
+![Kernel density estimates of site-level rate estimates. Means are shown with red rules. Estimates above 10 are censored at this value. We selected the branch of the GbA-II clade to test for rate variation among sites.](Datamonkey/GbA-II_rate_density_plots.png)
+
+\newpage
+
+We used the script below to read the JSON files downloaded from Datamonkey.  
+
+```{r datamonkey_json, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Load the package required to read JSON files.
+library("rjson")
+# Reading JSON output files from Datamonkey.
+result_HbaE <- fromJSON(file = "Datamonkey/HbaE.json")
+result_Lle_HbGbA1 <- fromJSON(file = "Datamonkey/Lle_HbGbA1.json")
+result_GbA1 <- fromJSON(file = "Datamonkey/GbA-I.json")
+result_GbA2 <- fromJSON(file = "Datamonkey/GbA-II.json")
+# Extracting substitution rates and converting them to a dataframe
+# HbaE
+HbaE <- result_HbaE$MLE$content$`0`
+names(HbaE) <- as.character(c(1:length(result_HbaE$MLE$content$`0`)))
+rates_HbaE <- t(do.call(cbind.data.frame, HbaE))
+colnames(rates_HbaE) <- c("alpha", "beta", "alpha=beta", "LRT", "p-value",
+                       "Total branch length")
+# Lle_HbGbA1
+Lle_HbGbA1 <- result_Lle_HbGbA1$MLE$content$`0`
+names(Lle_HbGbA1) <- as.character(c(1:length(result_Lle_HbGbA1$MLE$content$`0`)))
+rates_Lle_HbGbA1 <- t(do.call(cbind.data.frame, Lle_HbGbA1))
+colnames(rates_Lle_HbGbA1) <- c("alpha", "beta", "alpha=beta", "LRT",
+                                "p-value", "Total branch length")
+rates_Lle_HbGbA1 <- rates_Lle_HbGbA1[-c(140:141), ]
+row.names(rates_Lle_HbGbA1) <- c(1:140)
+# GbA-I
+GbA1 <- result_GbA1$MLE$content$`0`
+names(GbA1) <- as.character(c(1:length(result_GbA1$MLE$content$`0`)))
+rates_GbA1 <- t(do.call(cbind.data.frame, GbA1))
+colnames(rates_GbA1) <- c("alpha", "beta", "alpha=beta", "LRT",
+                                "p-value", "Total branch length")
+rates_GbA1 <- rates_GbA1[-c(77:80, 120:122, 140:141), ]
+row.names(rates_GbA1) <- c(1:133)
+# GbA-II
+GbA2 <- result_GbA2$MLE$content$`0`
+names(GbA2) <- as.character(c(1:length(result_GbA2$MLE$content$`0`)))
+rates_GbA2 <- t(do.call(cbind.data.frame, GbA2))
+colnames(rates_GbA2) <- c("alpha", "beta", "alpha=beta", "LRT",
+                                "p-value", "Total branch length")
+rates_GbA2 <- rates_GbA2[-c(116, 120:122, 140:141), ]
+row.names(rates_GbA2) <- c(1:136)
+rm(HbaE, GbA1, GbA2, Lle_HbGbA1, result_HbaE, result_Lle_HbGbA1, result_GbA1,
+   result_GbA2)
+
+```
+
+Now, we will select the non-synonymous substitution rate (beta column in the dataframes created above) and save the values of evolutionary rates as PDB B-factors on 3D structures representing the branches selected for analysis in Datamonkey. We chose Rca_Hba_01, Lle_HbGbA1, Rca_GbA, and Bbu_GbA_13 3D structures.  
+
+```{r rates_as_b-factores, echo=TRUE, message=FALSE, warning=FALSE}
+
+library(bio3d)
+# Saving site-specific evolutionary rates as PDB B-factors
+protein1 <- read.pdb(file = "GbA_3D_structures/Rca_Hba_01.pdb")
+protein2 <- read.pdb(file = "GbA_3D_structures/Lle_HbGbA1.pdb")
+protein3 <- read.pdb(file = "GbA_3D_structures/Rca_GbA.pdb")
+protein4 <- read.pdb(file = "GbA_3D_structures/Bbu_GbA_13.pdb")
+for (i in 1:length(rates_HbaE[, 2])) {
+  for (j in 1:length(protein1$atom$b)) {
+    if (protein1$atom$resno[j] == i) {
+      protein1$atom$b[j] <- rates_HbaE[i, 2]
+      }
+  }
+}
+write.pdb(protein1, file = "Datamonkey/Rca_Hba_01.pdb")
+for (i in 1:length(rates_Lle_HbGbA1[, 2])) {
+  for (j in 1:length(protein2$atom$b)) {
+    if (protein2$atom$resno[j] == i) {
+      protein2$atom$b[j] <- rates_Lle_HbGbA1[i, 2]
+      }
+  }
+}
+write.pdb(protein2, file = "Datamonkey/Lle_HbGbA1.pdb")
+for (i in 1:length(rates_GbA1[, 2])) {
+  for (j in 1:length(protein3$atom$b)) {
+    if (protein3$atom$resno[j] == i) {
+      protein3$atom$b[j] <- rates_GbA1[i, 2]
+      }
+  }
+}
+write.pdb(protein3, file = "Datamonkey/Rca_GbA_01.pdb")
+for (i in 1:length(rates_GbA2[, 2])) {
+  for (j in 1:length(protein4$atom$b)) {
+    if (protein4$atom$resno[j] == i) {
+      protein4$atom$b[j] <- rates_GbA2[i, 2]
+      }
+  }
+}
+write.pdb(protein4, file = "Datamonkey/Bbu_GbA_13.pdb")
+
+```
+
+We used the Python script below in PyMOL to map site-specific evolutionary rates to 3D structure.  
+
+```{r GbA-II_pymol, eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+
+# First, open all structures in PyMOL
+cmd.spectrum("b", "cyan_magenta", selection="all", minimum=0, maximum=5.000)
+
+# Trying the scrpt from 
+# https://pymolwiki.org/index.php/Load_new_B-factors
+write.csv(bfactor, file = "Datamonkey/newBfactors.txt", row.names = FALSE, col.names = FALSE)
+
+```
+
+Finally, we will visualize the 3D structures in PyMOL to observe the evolutionary rate variation among sites at the homodimer interface and compare the $\alpha^E$-globins with the Pelobatoidea GbA (Lle_HbGbA1) and both Neobatrachia globin clades.  
+
+![Evolutionary rate variation among protein sites for the branches of $\alpha^E$-globins from our dataset mapped to the 3D structure of Rca_Hba_01 as a color gradient from 0 (cyan) to 5 (magenta). Estimates above 5 are censored at this value.](Datamonkey/HbaE_3D.png)
+
+![Evolutionary rate variation among protein sites for the branch of Pelobatoidea GbA from our dataset mapped to the 3D structure of Lle_HbGbA1 as a color gradient from 0 (cyan) to 5 (magenta). Estimates above 5 are censored at this value.](Datamonkey/Lle_HbGbA1_3D.png)
+
+
+![Evolutionary rate variation among protein sites for the branch of Neobatrachia GbA-I clade from our dataset mapped to the 3D structure of Rca_GbA as a color gradient from 0 (cyan) to 5 (magenta). Estimates above 5 are censored at this value.](Datamonkey/GbA-I_3D.png)
+
+
+![Evolutionary rate variation among protein sites for the branch of Neobatrachia GbA-II clade from our dataset mapped to the 3D structure of Bbu_GbA_13 as a color gradient from 0 (cyan) to 5 (magenta). Estimates above 5 are censored at this value.](Datamonkey/GbA-II_3D.png)
+
+\newpage
+
+# Acknowledgements
+
+The FP7 WeNMR (project# 261572), H2020 West-Life (project# 675858), the EOSC-hub (project# 777536) and the EGI-ACE (project# 101017567) European e-Infrastructure projects are acknowledged for the use of their web portals, which make use of the EGI infrastructure with the dedicated support of CESNET-MCC, INFN-PADOVA-STACK, INFN-LNL-2, NCG-INGRID-PT, TW-NCHC, CESGA, IFCA-LCG2, UA-BITP, SURFsara and NIKHEF, and the additional support of the national GRID Initiatives of Belgium, France, Italy, Germany, the Netherlands, Poland, Portugal, Spain, UK, Taiwan and the US Open Science Grid.  
+
+\newpage
+
+# References
